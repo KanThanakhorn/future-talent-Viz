@@ -211,7 +211,8 @@ def save_document(item: Extracted, force: bool = False) -> tuple[int, bool]:
         for index, (start, end, content) in enumerate(chunks_from_pages(item.pages)):
             chunk_hash = hashlib.sha256(content.encode("utf-8")).hexdigest()
             conn.execute(
-                "INSERT INTO chunks(document_id,page_start,page_end,chunk_index,content,content_hash,embedding) VALUES(?,?,?,?,?,?,?)",
+                """INSERT INTO chunks(document_id,page_start,page_end,chunk_index,content,content_hash,embedding,source_type)
+                   VALUES(?,?,?,?,?,?,?,'narrative')""",
                 (document_id, start, end, index, content, chunk_hash, json.dumps(embed(content), separators=(",", ":"))),
             )
         for page in sorted(item.review_pages):
@@ -255,6 +256,9 @@ def seed_verified_data() -> None:
                 "INSERT OR IGNORE INTO skills(name,category,source_document_id,source_page) VALUES(?,?,?,?)",
                 (name, category, document_id, 35),
             )
+        from .analytics import seed_analytics
+
+        seed_analytics(conn)
 
 
 def log_failure(source_uri: str, message: str) -> None:

@@ -85,7 +85,46 @@ CREATE TABLE IF NOT EXISTS chunks (
     content_hash TEXT NOT NULL,
     embedding TEXT NOT NULL,
     embedding_model TEXT NOT NULL DEFAULT 'local-hash-v1',
+    source_type TEXT NOT NULL DEFAULT 'narrative' CHECK (source_type IN ('narrative', 'chart_ocr')),
     UNIQUE(document_id, chunk_index)
+);
+
+CREATE TABLE IF NOT EXISTS embedding_indexes (
+    model TEXT PRIMARY KEY,
+    dimension INTEGER NOT NULL,
+    status TEXT NOT NULL CHECK (status IN ('building', 'ready', 'failed')),
+    chunk_count INTEGER NOT NULL DEFAULT 0,
+    created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    activated_at TEXT
+);
+
+CREATE TABLE IF NOT EXISTS chunk_embeddings_v2 (
+    chunk_id INTEGER NOT NULL REFERENCES chunks(id) ON DELETE CASCADE,
+    model TEXT NOT NULL REFERENCES embedding_indexes(model) ON DELETE CASCADE,
+    embedding TEXT NOT NULL,
+    PRIMARY KEY(chunk_id, model)
+);
+
+CREATE TABLE IF NOT EXISTS system_settings (
+    key TEXT PRIMARY KEY,
+    value TEXT NOT NULL,
+    updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE IF NOT EXISTS analytics_metrics (
+    id INTEGER PRIMARY KEY,
+    chart_key TEXT NOT NULL,
+    series TEXT NOT NULL,
+    label TEXT NOT NULL,
+    value REAL,
+    unit TEXT NOT NULL,
+    period TEXT,
+    scope TEXT NOT NULL,
+    sort_order INTEGER NOT NULL DEFAULT 0,
+    source_document_id INTEGER NOT NULL REFERENCES documents(id),
+    source_page INTEGER NOT NULL,
+    note TEXT,
+    UNIQUE(chart_key, series, label, period, source_document_id)
 );
 
 CREATE VIRTUAL TABLE IF NOT EXISTS chunk_fts USING fts5(
@@ -108,4 +147,6 @@ END;
 
 CREATE INDEX IF NOT EXISTS idx_pages_document ON document_pages(document_id);
 CREATE INDEX IF NOT EXISTS idx_chunks_document ON chunks(document_id);
+CREATE INDEX IF NOT EXISTS idx_embeddings_model ON chunk_embeddings_v2(model);
+CREATE INDEX IF NOT EXISTS idx_analytics_chart ON analytics_metrics(chart_key, sort_order);
 CREATE INDEX IF NOT EXISTS idx_job_demand_year ON job_demand(year_start, year_end);

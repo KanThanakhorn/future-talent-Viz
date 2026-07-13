@@ -32,7 +32,13 @@ def health() -> dict:
     with connect() as conn:
         document_count = conn.execute("SELECT COUNT(*) FROM documents WHERE status='ready'").fetchone()[0]
         chunk_count = conn.execute("SELECT COUNT(*) FROM chunks").fetchone()[0]
-    return {"status": "ok", "documents": document_count, "chunks": chunk_count}
+        active = conn.execute(
+            """SELECT i.model,i.dimension,i.chunk_count,i.status
+               FROM embedding_indexes i JOIN system_settings s ON s.value=i.model
+               WHERE s.key='active_embedding_model'"""
+        ).fetchone()
+    index = dict(active) if active else {"model": "local-hash-v1", "dimension": 256, "chunk_count": chunk_count, "status": "fallback"}
+    return {"status": "ok", "documents": document_count, "chunks": chunk_count, "embedding_index": index}
 
 
 @app.get("/api/documents")
@@ -68,7 +74,28 @@ def dashboard() -> dict:
                       (SELECT COUNT(*) FROM document_pages WHERE needs_review=1) AS review_pages
                FROM documents WHERE status='ready'"""
         ).fetchone())
-    return {"totals": totals, "job_demand": demand, "skills": skills}
+        chart_rows = [dict(row) for row in conn.execute(
+            """SELECT a.chart_key,a.series,a.label,a.value,a.unit,a.period,a.scope,a.note,a.source_page,
+                      d.id AS document_id,d.title AS source_title
+               FROM analytics_metrics a JOIN documents d ON d.id=a.source_document_id
+               ORDER BY a.chart_key,a.sort_order"""
+        )]
+    charts: dict[str, list[dict]] = {}
+    for row in chart_rows:
+        charts.setdefault(row.pop("chart_key"), []).append(row)
+    charts["jobs_transition"] = demand
+    gap_ready = bool(charts.get("readiness_gap"))
+    charts["demand_readiness_gap"] = {
+        "status": "partial" if gap_ready else "data_required",
+        "global_demand": charts.get("skill_change", [])[:5],
+        "thai_readiness": charts.get("readiness_gap", []),
+        "curriculum_coverage": [],
+        "message": (
+            "ยังไม่มีข้อมูลความพร้อมรายทักษะของเยาวชนไทย และไม่มีตัวเลข curriculum coverage "
+            "จากเอกสาร STEM จึงไม่คำนวณช่องว่างรายทักษะ"
+        ),
+    }
+    return {"totals": totals, "job_demand": demand, "skills": skills, "charts": charts}
 
 
 @app.get("/api/search")
@@ -90,6 +117,7 @@ def chat(body: ChatRequest) -> dict:
             "page_start": item["page_start"],
             "page_end": item["page_end"],
             "score": round(item["score"], 4),
+            "source_type": item.get("source_type", "narrative"),
         }
         for index, item in enumerate(contexts, 1)
     ]

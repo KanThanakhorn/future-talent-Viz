@@ -1,0 +1,20 @@
+[
+  {"id":"wef-th-01","question":"ทักษะใดเติบโตเร็วที่สุดในช่วงปี 2025 ถึง 2030","document":"Future of Jobs Report 2025","pages":[37]},
+  {"id":"wef-th-02","question":"ทักษะการใช้มือ ความอดทน และความแม่นยำมีแนวโน้มลดลงเท่าไร","document":"Future of Jobs Report 2025","pages":[37,38]},
+  {"id":"wef-th-03","question":"ภายในปี 2030 จะมีงานใหม่เกิดขึ้นและถูกแทนที่กี่ล้านตำแหน่ง","document":"Future of Jobs Report 2025","pages":[5]},
+  {"id":"wef-th-04","question":"นายจ้างกี่เปอร์เซ็นต์คาดว่า AI และการประมวลผลข้อมูลจะเปลี่ยนธุรกิจ","document":"Future of Jobs Report 2025","pages":[5,11]},
+  {"id":"wef-th-05","question":"แนวโน้มมหภาคใดเปลี่ยนแปลงธุรกิจมากที่สุด","document":"Future of Jobs Report 2025","pages":[10]},
+  {"id":"wef-en-06","question":"How many workers out of 100 will need training by 2030?","document":"Future of Jobs Report 2025","pages":[6]},
+  {"id":"wef-en-07","question":"What percentage of employers identify skills gaps as a barrier?","document":"Future of Jobs Report 2025","pages":[6]},
+  {"id":"wef-en-08","question":"Which technology trends are expected to transform business by 2030?","document":"Future of Jobs Report 2025","pages":[11]},
+  {"id":"neet-th-01","question":"จังหวัดใดมีสัดส่วนเยาวชน NEET สูงที่สุดในประเทศไทย","document":"In-depth Research on Youth NEET in Thailand","pages":[40,41]},
+  {"id":"neet-th-02","question":"สัดส่วนเยาวชน NEET ในกลุ่มที่อยากพัฒนาทักษะและพร้อมทำงานเท่าไร","document":"In-depth Research on Youth NEET in Thailand","pages":[45]},
+  {"id":"neet-th-03","question":"เยาวชน NEET ทั้งสี่กลุ่มแบ่งตามแรงจูงใจและความพร้อมอย่างไร","document":"In-depth Research on Youth NEET in Thailand","pages":[45]},
+  {"id":"neet-th-04","question":"เยาวชนไทยอายุ 15 ถึง 19 และ 20 ถึง 24 ปีมีอัตรา NEET ต่างกันอย่างไร","document":"In-depth Research on Youth NEET in Thailand","pages":[38,39]},
+  {"id":"neet-th-05","question":"ระดับการศึกษาใดมีสัดส่วนเยาวชน NEET มากที่สุด","document":"In-depth Research on Youth NEET in Thailand","pages":[43]},
+  {"id":"neet-th-06","question":"เหตุใดเยาวชนหญิงไทยจึงมีโอกาสเป็น NEET สูงกว่าผู้ชาย","document":"In-depth Research on Youth NEET in Thailand","pages":[38,39]},
+  {"id":"neet-en-07","question":"What are the top three provinces with the highest youth NEET rates?","document":"In-depth Research on Youth NEET in Thailand","pages":[40,41]},
+  {"id":"neet-en-08","question":"How many youth NEET had an academic bachelor's degree in 2021?","document":"In-depth Research on Youth NEET in Thailand","pages":[43,44]},
+  {"id":"neet-en-09","question":"What share of youth NEET do not want skills and are not ready to work?","document":"In-depth Research on Youth NEET in Thailand","pages":[45]},
+  {"id":"neet-en-10","question":"How does rural or urban location influence youth NEET rates?","document":"In-depth Research on Youth NEET in Thailand","pages":[40]}
+]

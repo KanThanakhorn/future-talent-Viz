@@ -20,6 +20,15 @@ def connect(path: Path | None = None) -> sqlite3.Connection:
 def init_db(path: Path | None = None) -> None:
     with connect(path) as conn:
         conn.executescript((ROOT / "app" / "schema.sql").read_text(encoding="utf-8"))
+        columns = {row[1] for row in conn.execute("PRAGMA table_info(chunks)")}
+        if "source_type" not in columns:
+            conn.execute(
+                "ALTER TABLE chunks ADD COLUMN source_type TEXT NOT NULL DEFAULT 'narrative' "
+                "CHECK (source_type IN ('narrative', 'chart_ocr'))"
+            )
+        from .analytics import seed_analytics
+
+        seed_analytics(conn)
 
 
 @contextmanager

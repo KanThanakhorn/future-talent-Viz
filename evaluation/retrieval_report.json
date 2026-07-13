@@ -1,0 +1,610 @@
+{
+  "cases": 18,
+  "metric": "document-and-page overlap hit@3",
+  "before": {
+    "retriever": "legacy feature hashing",
+    "hits": 5,
+    "hit_rate": 0.2778
+  },
+  "after": {
+    "retriever": "BM25 + active vector via RRF + reranker",
+    "hits": 10,
+    "hit_rate": 0.5556
+  },
+  "details": [
+    {
+      "id": "wef-th-01",
+      "before_hit@3": false,
+      "after_hit@3": false,
+      "before_pages": [
+        [
+          "In-depth Research on Youth NEET in Thailand",
+          130
+        ],
+        [
+          "In-depth Research on Youth NEET in Thailand",
+          77
+        ],
+        [
+          "Future of Jobs Report 2025",
+          3
+        ]
+      ],
+      "after_pages": [
+        [
+          "Future of Jobs Report 2025",
+          75
+        ],
+        [
+          "Future of Jobs Report 2025",
+          40
+        ],
+        [
+          "Future of Jobs Report 2025",
+          260
+        ]
+      ]
+    },
+    {
+      "id": "wef-th-02",
+      "before_hit@3": false,
+      "after_hit@3": true,
+      "before_pages": [
+        [
+          "In-depth Research on Youth NEET in Thailand",
+          134
+        ],
+        [
+          "In-depth Research on Youth NEET in Thailand",
+          125
+        ],
+        [
+          "In-depth Research on Youth NEET in Thailand",
+          60
+        ]
+      ],
+      "after_pages": [
+        [
+          "Future of Jobs Report 2025",
+          43
+        ],
+        [
+          "Future of Jobs Report 2025",
+          36
+        ],
+        [
+          "In-depth Research on Youth NEET in Thailand",
+          34
+        ]
+      ]
+    },
+    {
+      "id": "wef-th-03",
+      "before_hit@3": false,
+      "after_hit@3": false,
+      "before_pages": [
+        [
+          "Future of Jobs Report 2025",
+          136
+        ],
+        [
+          "Future of Jobs Report 2025",
+          178
+        ],
+        [
+          "Future of Jobs Report 2025",
+          158
+        ]
+      ],
+      "after_pages": [
+        [
+          "Future of Jobs Report 2025",
+          75
+        ],
+        [
+          "Future of Jobs Report 2025",
+          110
+        ],
+        [
+          "Future of Jobs Report 2025",
+          248
+        ]
+      ]
+    },
+    {
+      "id": "wef-th-04",
+      "before_hit@3": false,
+      "after_hit@3": false,
+      "before_pages": [
+        [
+          "In-depth Research on Youth NEET in Thailand",
+          139
+        ],
+        [
+          "In-depth Research on Youth NEET in Thailand",
+          20
+        ],
+        [
+          "In-depth Research on Youth NEET in Thailand",
+          32
+        ]
+      ],
+      "after_pages": [
+        [
+          "Future of Jobs Report 2025",
+          117
+        ],
+        [
+          "Future of Jobs Report 2025",
+          62
+        ],
+        [
+          "Future of Jobs Report 2025",
+          253
+        ]
+      ]
+    },
+    {
+      "id": "wef-th-05",
+      "before_hit@3": false,
+      "after_hit@3": false,
+      "before_pages": [
+        [
+          "In-depth Research on Youth NEET in Thailand",
+          5
+        ],
+        [
+          "In-depth Research on Youth NEET in Thailand",
+          32
+        ],
+        [
+          "Future of Jobs Report 2025",
+          22
+        ]
+      ],
+      "after_pages": [
+        [
+          "Future of Jobs Report 2025",
+          128
+        ],
+        [
+          "Future of Jobs Report 2025",
+          156
+        ],
+        [
+          "Future of Jobs Report 2025",
+          134
+        ]
+      ]
+    },
+    {
+      "id": "wef-en-06",
+      "before_hit@3": false,
+      "after_hit@3": true,
+      "before_pages": [
+        [
+          "Future of Jobs Report 2025",
+          47
+        ],
+        [
+          "In-depth Research on Youth NEET in Thailand",
+          49
+        ],
+        [
+          "Future of Jobs Report 2025",
+          258
+        ]
+      ],
+      "after_pages": [
+        [
+          "Future of Jobs Report 2025",
+          47
+        ],
+        [
+          "Future of Jobs Report 2025",
+          6
+        ],
+        [
+          "Future of Jobs Report 2025",
+          117
+        ]
+      ]
+    },
+    {
+      "id": "wef-en-07",
+      "before_hit@3": false,
+      "after_hit@3": false,
+      "before_pages": [
+        [
+          "In-depth Research on Youth NEET in Thailand",
+          51
+        ],
+        [
+          "In-depth Research on Youth NEET in Thailand",
+          29
+        ],
+        [
+          "In-depth Research on Youth NEET in Thailand",
+          47
+        ]
+      ],
+      "after_pages": [
+        [
+          "Future of Jobs Report 2025",
+          75
+        ],
+        [
+          "Future of Jobs Report 2025",
+          73
+        ],
+        [
+          "Future of Jobs Report 2025",
+          67
+        ]
+      ]
+    },
+    {
+      "id": "wef-en-08",
+      "before_hit@3": true,
+      "after_hit@3": true,
+      "before_pages": [
+        [
+          "Future of Jobs Report 2025",
+          5
+        ],
+        [
+          "Future of Jobs Report 2025",
+          10
+        ],
+        [
+          "Future of Jobs Report 2025",
+          218
+        ]
+      ],
+      "after_pages": [
+        [
+          "Future of Jobs Report 2025",
+          10
+        ],
+        [
+          "Future of Jobs Report 2025",
+          5
+        ],
+        [
+          "Future of Jobs Report 2025",
+          274
+        ]
+      ]
+    },
+    {
+      "id": "neet-th-01",
+      "before_hit@3": false,
+      "after_hit@3": true,
+      "before_pages": [
+        [
+          "In-depth Research on Youth NEET in Thailand",
+          45
+        ],
+        [
+          "การพัฒนาทุนมนุษย์ในประเทศไทย : การศึกษาช่องว่าง อุปสรรค ทางเลือกนโยบาย",
+          1
+        ],
+        [
+          "Future of Jobs Report 2025",
+          43
+        ]
+      ],
+      "after_pages": [
+        [
+          "In-depth Research on Youth NEET in Thailand",
+          38
+        ],
+        [
+          "In-depth Research on Youth NEET in Thailand",
+          39
+        ],
+        [
+          "In-depth Research on Youth NEET in Thailand",
+          41
+        ]
+      ]
+    },
+    {
+      "id": "neet-th-02",
+      "before_hit@3": false,
+      "after_hit@3": false,
+      "before_pages": [
+        [
+          "In-depth Research on Youth NEET in Thailand",
+          107
+        ],
+        [
+          "In-depth Research on Youth NEET in Thailand",
+          89
+        ],
+        [
+          "In-depth Research on Youth NEET in Thailand",
+          105
+        ]
+      ],
+      "after_pages": [
+        [
+          "In-depth Research on Youth NEET in Thailand",
+          38
+        ],
+        [
+          "In-depth Research on Youth NEET in Thailand",
+          51
+        ],
+        [
+          "In-depth Research on Youth NEET in Thailand",
+          39
+        ]
+      ]
+    },
+    {
+      "id": "neet-th-03",
+      "before_hit@3": false,
+      "after_hit@3": false,
+      "before_pages": [
+        [
+          "In-depth Research on Youth NEET in Thailand",
+          34
+        ],
+        [
+          "In-depth Research on Youth NEET in Thailand",
+          110
+        ],
+        [
+          "การพัฒนาทุนมนุษย์ในประเทศไทย : การศึกษาช่องว่าง อุปสรรค ทางเลือกนโยบาย",
+          1
+        ]
+      ],
+      "after_pages": [
+        [
+          "In-depth Research on Youth NEET in Thailand",
+          51
+        ],
+        [
+          "In-depth Research on Youth NEET in Thailand",
+          38
+        ],
+        [
+          "In-depth Research on Youth NEET in Thailand",
+          95
+        ]
+      ]
+    },
+    {
+      "id": "neet-th-04",
+      "before_hit@3": false,
+      "after_hit@3": true,
+      "before_pages": [
+        [
+          "In-depth Research on Youth NEET in Thailand",
+          117
+        ],
+        [
+          "Future of Jobs Report 2025",
+          67
+        ],
+        [
+          "Future of Jobs Report 2025",
+          68
+        ]
+      ],
+      "after_pages": [
+        [
+          "In-depth Research on Youth NEET in Thailand",
+          39
+        ],
+        [
+          "In-depth Research on Youth NEET in Thailand",
+          38
+        ],
+        [
+          "In-depth Research on Youth NEET in Thailand",
+          39
+        ]
+      ]
+    },
+    {
+      "id": "neet-th-05",
+      "before_hit@3": false,
+      "after_hit@3": true,
+      "before_pages": [
+        [
+          "In-depth Research on Youth NEET in Thailand",
+          83
+        ],
+        [
+          "In-depth Research on Youth NEET in Thailand",
+          105
+        ],
+        [
+          "In-depth Research on Youth NEET in Thailand",
+          57
+        ]
+      ],
+      "after_pages": [
+        [
+          "In-depth Research on Youth NEET in Thailand",
+          38
+        ],
+        [
+          "In-depth Research on Youth NEET in Thailand",
+          41
+        ],
+        [
+          "In-depth Research on Youth NEET in Thailand",
+          39
+        ]
+      ]
+    },
+    {
+      "id": "neet-th-06",
+      "before_hit@3": true,
+      "after_hit@3": true,
+      "before_pages": [
+        [
+          "In-depth Research on Youth NEET in Thailand",
+          45
+        ],
+        [
+          "In-depth Research on Youth NEET in Thailand",
+          38
+        ],
+        [
+          "Future of Jobs Report 2025",
+          22
+        ]
+      ],
+      "after_pages": [
+        [
+          "In-depth Research on Youth NEET in Thailand",
+          38
+        ],
+        [
+          "In-depth Research on Youth NEET in Thailand",
+          51
+        ],
+        [
+          "In-depth Research on Youth NEET in Thailand",
+          39
+        ]
+      ]
+    },
+    {
+      "id": "neet-en-07",
+      "before_hit@3": true,
+      "after_hit@3": true,
+      "before_pages": [
+        [
+          "In-depth Research on Youth NEET in Thailand",
+          39
+        ],
+        [
+          "In-depth Research on Youth NEET in Thailand",
+          41
+        ],
+        [
+          "In-depth Research on Youth NEET in Thailand",
+          138
+        ]
+      ],
+      "after_pages": [
+        [
+          "In-depth Research on Youth NEET in Thailand",
+          41
+        ],
+        [
+          "In-depth Research on Youth NEET in Thailand",
+          111
+        ],
+        [
+          "In-depth Research on Youth NEET in Thailand",
+          23
+        ]
+      ]
+    },
+    {
+      "id": "neet-en-08",
+      "before_hit@3": true,
+      "after_hit@3": true,
+      "before_pages": [
+        [
+          "In-depth Research on Youth NEET in Thailand",
+          43
+        ],
+        [
+          "In-depth Research on Youth NEET in Thailand",
+          107
+        ],
+        [
+          "Future of Jobs Report 2025",
+          89
+        ]
+      ],
+      "after_pages": [
+        [
+          "In-depth Research on Youth NEET in Thailand",
+          45
+        ],
+        [
+          "In-depth Research on Youth NEET in Thailand",
+          43
+        ],
+        [
+          "In-depth Research on Youth NEET in Thailand",
+          48
+        ]
+      ]
+    },
+    {
+      "id": "neet-en-09",
+      "before_hit@3": false,
+      "after_hit@3": false,
+      "before_pages": [
+        [
+          "In-depth Research on Youth NEET in Thailand",
+          5
+        ],
+        [
+          "In-depth Research on Youth NEET in Thailand",
+          51
+        ],
+        [
+          "In-depth Research on Youth NEET in Thailand",
+          47
+        ]
+      ],
+      "after_pages": [
+        [
+          "In-depth Research on Youth NEET in Thailand",
+          5
+        ],
+        [
+          "In-depth Research on Youth NEET in Thailand",
+          1
+        ],
+        [
+          "In-depth Research on Youth NEET in Thailand",
+          51
+        ]
+      ]
+    },
+    {
+      "id": "neet-en-10",
+      "before_hit@3": true,
+      "after_hit@3": true,
+      "before_pages": [
+        [
+          "In-depth Research on Youth NEET in Thailand",
+          135
+        ],
+        [
+          "In-depth Research on Youth NEET in Thailand",
+          138
+        ],
+        [
+          "In-depth Research on Youth NEET in Thailand",
+          39
+        ]
+      ],
+      "after_pages": [
+        [
+          "In-depth Research on Youth NEET in Thailand",
+          39
+        ],
+        [
+          "In-depth Research on Youth NEET in Thailand",
+          51
+        ],
+        [
+          "In-depth Research on Youth NEET in Thailand",
+          49
+        ]
+      ]
+    }
+  ]
+}

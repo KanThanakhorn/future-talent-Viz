@@ -1,6 +1,6 @@
 # Future Ready Talent Knowledge Platform
 
-แพลตฟอร์มข้อมูลแรงงานที่นำ PDF และ URL reference เข้าแบบ idempotent, เก็บข้อมูลที่ตรวจสอบย้อนกลับได้ใน SQL, ทำ hybrid retrieval และแสดง dashboard/chat ผ่านเว็บไซต์เดียวกัน
+แพลตฟอร์มข้อมูลแรงงานที่นำ PDF และ URL reference เข้าแบบ idempotent, เก็บข้อมูลที่ตรวจสอบย้อนกลับได้ใน SQL, ทำ hybrid retrieval และแสดงเรื่องราว demand vs readiness ผ่าน dashboard/chat
 
 ## เริ่มใช้งาน
 
@@ -13,6 +13,7 @@
 ```bash
 ./scripts/setup-local.sh
 python3 -m app.ingest
+PYTHONPATH=.:.python-deps python3 -m app.reindex_embeddings
 ./scripts/run-local.sh
 ```
 
@@ -24,6 +25,7 @@ source .venv/bin/activate
 pip install -r requirements.txt
 cp .env.example .env
 python -m app.ingest
+python -m app.reindex_embeddings
 uvicorn app.main:app --reload
 ```
 
@@ -34,6 +36,7 @@ uvicorn app.main:app --reload
 ```bash
 docker compose build
 docker compose run --rm app python -m app.ingest
+docker compose run --rm app python -m app.reindex_embeddings
 docker compose up
 ```
 
@@ -49,9 +52,15 @@ python -m app.ocr
 python -m app.ocr --limit 20
 ```
 
-OCR จะไม่ทับข้อความเดิม แต่ต่อเป็น supplement และ rebuild index เฉพาะเอกสารที่เปลี่ยน Retrieval ใช้ embedding แบบ feature hashing 256 มิติที่เก็บใน SQLite ร่วมกับ metadata ระดับหน้า จึงทำงาน offline ได้ หากตั้ง `OPENAI_API_KEY` chat จะให้โมเดลสังเคราะห์คำตอบจาก context ที่ค้นได้; ถ้าไม่ตั้ง ระบบคืน grounded extract โดยตรง
+OCR จะไม่ทับข้อความเดิม แต่ต่อเป็น supplement และ rebuild index เฉพาะเอกสารที่เปลี่ยน Chunk แยก `narrative` กับ `chart_ocr` เพื่อให้ citation บอกชนิดหลักฐานได้
+
+Retrieval ใช้ SQLite FTS5/BM25 ร่วมกับ multilingual ONNX embedding แล้วรวมอันดับด้วย Reciprocal Rank Fusion ก่อน cross-encoder re-ranking โมเดลจะดาวน์โหลดครั้งแรกลง `data/model-cache` และทำงาน offline จาก cache ได้ การ re-index สร้าง vector ใน `chunk_embeddings_v2` แยกจาก legacy index ตรวจจำนวน/dimension ให้ครบก่อน activate จึง rollback ได้ หากไม่มี FastEmbed หรือ active index ระบบยัง fallback ไป legacy index โดย extractive mode ไม่หยุดทำงาน
+
+หากตั้ง `OPENAI_API_KEY` chat จะให้โมเดลสังเคราะห์คำตอบจาก context ที่ค้นได้; ถ้าไม่ตั้ง ระบบคืน grounded extract โดยตรง
 
 ตัวเลขบน dashboard query จาก `job_demand` ใน SQL เท่านั้น ไม่ผ่าน RAG ข้อมูล seed ที่ยืนยันแล้วระบุ `source_document_id` และ `source_page` ทุกแถว
+
+Dashboard มี 7 มุมมอง: skills rise/decline, jobs created/displaced, macrotrends, จังหวัด NEET, NEET 4 กลุ่ม, gender/age/education และ demand-vs-readiness gap กราฟสุดท้ายแสดงสถานะ partial เพราะยังไม่มี readiness รายทักษะหรือ curriculum coverage และจะไม่สร้างตัวเลขแทนข้อมูลที่ขาด
 
 ## API หลัก
 
@@ -78,10 +87,11 @@ flowchart LR
     C --> P
     P --> S[(SQLite knowledge DB)]
     P --> K[300–500 word chunks]
-    K --> E[Local vector embeddings]
+    K --> E[Multilingual ONNX embeddings]
     E --> S
-    S --> Q[Hybrid retrieval]
-    Q --> R[RAG answer + citations]
+    S --> Q[BM25 + vector + RRF]
+    Q --> X[Cross-encoder rerank]
+    X --> R[RAG answer + citations]
     S --> N[Numeric SQL queries]
     R --> W[FastAPI + Web UI]
     N --> W
@@ -94,4 +104,7 @@ flowchart LR
 ```bash
 python -m unittest discover -s tests -v
 python -m compileall -q app
+PYTHONPATH=.:.python-deps python evaluation/run_retrieval_eval.py
 ```
+
+ผล evaluation ปัจจุบันเพิ่ม hit@3 จาก 27.78% เป็น 55.56% ดูรายละเอียดใน `evaluation/retrieval_report.md`

@@ -1,5 +1,6 @@
 const fmt = new Intl.NumberFormat('th-TH');
 const $ = (id) => document.getElementById(id);
+const esc = (value) => String(value ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 
 async function api(path, options) {
   const response = await fetch(path, options);
@@ -22,7 +23,36 @@ function drawChart(rows) {
     ctx.font = '600 18px Manrope'; ctx.fillText(`${fmt.format(row.headcount_needed / 1e6)}M`, Math.min(620, 160 + width), y + 30);
   });
   $('demandLegend').innerHTML = rows.map((r, i) => `<div class="legend-item"><i class="legend-dot" style="background:${colors[i]}"></i><span>${r.job_role} · ${r.year_start}–${r.year_end}</span></div>`).join('');
-  if (rows[0]) $('chartSource').textContent = `ที่มา: ${rows[0].source_title}, หน้า ${rows[0].source_page}`;
+  if (rows[0]) $('chartSource').innerHTML = sourceLink(rows[0]);
+}
+
+function sourceLink(row) {
+  return `<a class="source-link" target="_blank" href="/api/documents/${row.document_id}/pages/${row.source_page}">↗ ${esc(row.source_title)} · หน้า ${row.source_page}</a>`;
+}
+
+function renderBars(target, rows, options = {}) {
+  const max = Math.max(...rows.map(r => Math.abs(r.value)), 1);
+  $(target).innerHTML = rows.map(row => {
+    const width = Math.max(2, Math.abs(row.value) / max * 100);
+    const tone = row.value < 0 || row.series === 'Declining' ? 'negative' : (row.series === 'Technology' ? 'accent' : '');
+    return `<div class="bar-row"><div class="bar-meta"><span>${esc(row.label)}</span><strong>${fmt.format(row.value)}${row.unit.startsWith('%') ? '%' : ''}</strong></div><div class="bar-track"><i class="${tone}" style="width:${width}%"></i></div><div class="bar-foot"><small>${esc(row.series)} · ${esc(row.scope)}</small>${sourceLink(row)}</div></div>`;
+  }).join('');
+}
+
+function renderGroups(rows) {
+  const colors = ['#c8f05a','#65b891','#ffb65c','#ff704d'];
+  let stop = 0; const gradient = rows.map((r, i) => { const start = stop; stop += r.value; return `${colors[i]} ${start}% ${stop}%`; }).join(',');
+  $('groupChart').innerHTML = `<div class="donut" style="background:conic-gradient(${gradient})"><div><strong>${fmt.format(rows.reduce((s,r)=>s+r.value,0))}%</strong><small>classified NEET</small></div></div><div class="donut-legend">${rows.map((r,i)=>`<div><i style="background:${colors[i]}"></i><span>${esc(r.label)}</span><strong>${r.value}%</strong>${sourceLink(r)}</div>`).join('')}</div>`;
+}
+
+function renderDemographics(rows) {
+  const grouped = Object.groupBy ? Object.groupBy(rows, r => r.series) : rows.reduce((a,r)=>((a[r.series]??=[]).push(r),a),{});
+  $('demographicChart').innerHTML = Object.entries(grouped).map(([name, values]) => `<section><h4>${esc(name)}</h4><div class="bar-chart compact">${values.map(row=>`<div class="bar-row"><div class="bar-meta"><span>${esc(row.label)}</span><strong>${row.value}%</strong></div><div class="bar-track"><i style="width:${Math.min(100,row.value/35*100)}%"></i></div><div class="bar-foot">${sourceLink(row)}</div></div>`).join('')}</div></section>`).join('');
+}
+
+function renderGap(gap) {
+  const thai = gap.thai_readiness?.[0]; const demand = gap.global_demand || [];
+  $('gapChart').innerHTML = `<div class="gap-columns"><div><span class="scope-label global">GLOBAL · WEF</span><h3>Top skill demand signals</h3>${demand.map(r=>`<div class="gap-skill"><span>${esc(r.label)}</span><strong>${r.value}</strong>${sourceLink(r)}</div>`).join('')}</div><div class="gap-divider">≠</div><div><span class="scope-label thai">THAILAND · NEET</span><h3>พร้อมพัฒนาทักษะโดยรวม</h3>${thai ? `<strong class="readiness-number">${thai.value}%</strong><p>ของ classified youth NEET ต้องการพัฒนาทักษะ ไม่ใช่ readiness รายทักษะ</p>${sourceLink(thai)}` : '<p>ยังไม่มีข้อมูล</p>'}</div></div><div class="data-required"><b>DATA REQUIRED</b><p>${esc(gap.message)}</p><small>ชั้นที่ 3 “Thai curriculum coverage” จะแสดงเมื่อมีข้อมูลเชิงปริมาณรายทักษะจากหลักสูตร/STEM</small></div>`;
 }
 
 async function load() {
@@ -33,7 +63,12 @@ async function load() {
     $('chunkCount').textContent = fmt.format(t.chunks); $('reviewCount').textContent = fmt.format(t.review_pages);
     $('systemStatus').textContent = `${fmt.format(t.documents)} แหล่งข้อมูลพร้อมใช้`;
     drawChart(dashboard.job_demand);
-    $('skillGrid').innerHTML = dashboard.skills.map((s, i) => `<article class="skill"><span class="rank">${String(i + 1).padStart(2, '0')}</span><h3>${s.name}</h3><span class="tag">${s.category}</span></article>`).join('');
+    renderBars('skillChangeChart', dashboard.charts.skill_change || []);
+    renderBars('macroTrendChart', dashboard.charts.macrotrends || []);
+    renderBars('provinceChart', dashboard.charts.neet_provinces || []);
+    renderGroups(dashboard.charts.neet_groups || []);
+    renderDemographics(dashboard.charts.neet_demographics || []);
+    renderGap(dashboard.charts.demand_readiness_gap);
     $('documents').innerHTML = docs.map(d => `<a class="document" href="${d.document_type === 'pdf' ? `/api/documents/${d.id}/source` : d.source_uri}" target="_blank" rel="noreferrer"><span class="document-icon">${d.document_type.toUpperCase()}</span><div><h3>${d.title}</h3><p>${d.source} · ${d.topic}</p></div><span>${d.page_count || 1} หน้า</span><small>${d.review_pages ? `review ${d.review_pages}` : 'พร้อมใช้'} ↗</small></a>`).join('') || '<div class="loading">ยังไม่มีเอกสาร — รัน ingestion ก่อน</div>';
   } catch (error) { $('systemStatus').textContent = 'ไม่สามารถโหลดข้อมูล'; console.error(error); }
 }
@@ -48,7 +83,7 @@ $('chatForm').addEventListener('submit', async (event) => {
     const result = await api('/api/chat', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({question})});
     pending.textContent = result.answer;
     const cites = document.createElement('div'); cites.className = 'citations';
-    result.citations.forEach(c => { const a = document.createElement('a'); a.className = 'citation'; a.href = `/api/documents/${c.document_id}/pages/${c.page_start}`; a.target = '_blank'; a.textContent = `[${c.index}] ${c.title} · หน้า ${c.page_start}${c.page_end !== c.page_start ? `–${c.page_end}` : ''}`; cites.appendChild(a); });
+    result.citations.forEach(c => { const a = document.createElement('a'); a.className = 'citation'; a.href = `/api/documents/${c.document_id}/pages/${c.page_start}`; a.target = '_blank'; a.textContent = `[${c.index}] ${c.title} · หน้า ${c.page_start}${c.page_end !== c.page_start ? `–${c.page_end}` : ''} · ${c.source_type === 'chart_ocr' ? 'OCR chart' : 'narrative'}`; cites.appendChild(a); });
     pending.after(cites);
   } catch (_) { pending.textContent = 'เกิดข้อผิดพลาดขณะค้นข้อมูล กรุณาลองใหม่'; }
   finally { button.disabled = false; messages.scrollTop = messages.scrollHeight; }

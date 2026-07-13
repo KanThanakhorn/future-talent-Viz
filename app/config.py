@@ -31,6 +31,13 @@ class Settings:
     retrieval_limit: int = int(os.getenv("FRT_RETRIEVAL_LIMIT", "6"))
     openai_api_key: str = os.getenv("OPENAI_API_KEY", "")
     openai_model: str = os.getenv("OPENAI_MODEL", "gpt-5-mini")
+    embedding_model: str = os.getenv(
+        "FRT_EMBEDDING_MODEL", "sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2"
+    )
+    reranker_model: str = os.getenv("FRT_RERANKER_MODEL", "Xenova/ms-marco-MiniLM-L-6-v2")
+    model_cache_path: Path = ROOT / os.getenv("FRT_MODEL_CACHE_PATH", "data/model-cache")
+    retrieval_candidates: int = int(os.getenv("FRT_RETRIEVAL_CANDIDATES", "50"))
+    enable_reranker: bool = os.getenv("FRT_ENABLE_RERANKER", "1") not in {"0", "false", "False"}
 
 
 settings = Settings()

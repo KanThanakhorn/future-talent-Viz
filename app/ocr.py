@@ -72,12 +72,20 @@ def process(document_id: int | None = None, limit: int | None = None) -> tuple[i
                 )
                 failed += 1
         for doc_id in changed_documents:
-            rows = conn.execute("SELECT content FROM document_pages WHERE document_id=? ORDER BY page_number", (doc_id,)).fetchall()
+            rows = conn.execute(
+                "SELECT page_number,content,extraction_method FROM document_pages WHERE document_id=? ORDER BY page_number",
+                (doc_id,),
+            ).fetchall()
             conn.execute("DELETE FROM chunks WHERE document_id=?", (doc_id,))
             for index, (start, end, content) in enumerate(chunks_from_pages([row["content"] for row in rows])):
+                source_type = "chart_ocr" if any(
+                    row["extraction_method"] == "hybrid-text-ocr" and start <= row["page_number"] <= end
+                    for row in rows
+                ) else "narrative"
                 conn.execute(
-                    "INSERT INTO chunks(document_id,page_start,page_end,chunk_index,content,content_hash,embedding) VALUES(?,?,?,?,?,?,?)",
-                    (doc_id, start, end, index, content, hashlib.sha256(content.encode()).hexdigest(), json.dumps(embed(content), separators=(",", ":"))),
+                    """INSERT INTO chunks(document_id,page_start,page_end,chunk_index,content,content_hash,embedding,source_type)
+                       VALUES(?,?,?,?,?,?,?,?)""",
+                    (doc_id, start, end, index, content, hashlib.sha256(content.encode()).hexdigest(), json.dumps(embed(content), separators=(",", ":")), source_type),
                 )
     return completed, failed
 
