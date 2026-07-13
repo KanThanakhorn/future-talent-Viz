@@ -5,7 +5,7 @@ from pathlib import Path
 
 from app.analytics import seed_analytics
 from app.db import connect, init_db
-from app.ingest import _is_url_reference, chunks_from_pages
+from app.ingest import ArticleParser, _is_url_reference, chunks_from_pages
 from app.retrieval import _fts_tokens, cosine, embed
 
 
@@ -29,6 +29,20 @@ class CoreTests(unittest.TestCase):
         self.assertEqual(chunks[0][0], 1)
         self.assertEqual(chunks[-1][1], 2)
 
+    def test_tdri_parser_keeps_article_body_and_drops_noise(self):
+        parser = ArticleParser(tdri=True)
+        parser.feed("""
+          <nav>site menu</nav>
+          <div id="content_body_post" class="et_pb_post_content">
+            <h1>Evidence title</h1><p>""" + "evidence " * 80 + """</p>
+          </div>
+          <div class="related-posts">อ่านเพิ่มเติม noisy recommendation</div>
+        """)
+        text = parser.text()
+        self.assertIn("Evidence title", text)
+        self.assertNotIn("site menu", text)
+        self.assertNotIn("recommendation", text)
+
     def test_fts_terms_drop_question_stopwords(self):
         self.assertEqual(_fts_tokens("What skills are growing fastest?"), ["skills", "growing", "fastest"])
 
@@ -39,6 +53,8 @@ class CoreTests(unittest.TestCase):
             with connect(path) as conn:
                 columns = {row[1] for row in conn.execute("PRAGMA table_info(chunks)")}
                 self.assertIn("source_type", columns)
+                requirement_columns = {row[1] for row in conn.execute("PRAGMA table_info(skill_requirements)")}
+                self.assertTrue({"source_document_id", "source_page", "evidence_scope"} <= requirement_columns)
                 for source_uri, title in [
                     ("file:///wef.pdf", "Future of Jobs Report 2025"),
                     ("file:///neet.pdf", "In-depth Research on Youth NEET in Thailand"),

@@ -13,19 +13,27 @@ logging.basicConfig(level=logging.INFO, format="%(levelname)s %(message)s")
 LOG = logging.getLogger("embedding-migration")
 
 
-def migrate(batch_size: int = 32, activate: bool = True) -> dict:
+def migrate(batch_size: int = 32, activate: bool = True, resume: bool = False) -> dict:
     """Build a separate v2 index, verify it, then atomically activate it."""
     init_db()
     model = settings.embedding_model
     with connect() as conn:
-        chunks = conn.execute("SELECT id,content FROM chunks ORDER BY id").fetchall()
+        all_chunks = conn.execute("SELECT id,content FROM chunks ORDER BY id").fetchall()
+        chunks = all_chunks
         conn.execute(
             """INSERT INTO embedding_indexes(model,dimension,status,chunk_count)
                VALUES(?,0,'building',0)
                ON CONFLICT(model) DO UPDATE SET status='building',chunk_count=0,activated_at=NULL""",
             (model,),
         )
-        conn.execute("DELETE FROM chunk_embeddings_v2 WHERE model=?", (model,))
+        if resume:
+            chunks = conn.execute(
+                """SELECT id,content FROM chunks WHERE id NOT IN (
+                       SELECT chunk_id FROM chunk_embeddings_v2 WHERE model=?
+                   ) ORDER BY id""", (model,),
+            ).fetchall()
+        else:
+            conn.execute("DELETE FROM chunk_embeddings_v2 WHERE model=?", (model,))
         conn.commit()
     dimension = 0
     try:
@@ -45,8 +53,13 @@ def migrate(batch_size: int = 32, activate: bool = True) -> dict:
             LOG.info("Embedded %s/%s chunks", min(start + len(batch), len(chunks)), len(chunks))
         with connect() as conn:
             count = conn.execute("SELECT COUNT(*) FROM chunk_embeddings_v2 WHERE model=?", (model,)).fetchone()[0]
-            if count != len(chunks):
-                raise RuntimeError(f"Index verification failed: expected {len(chunks)}, found {count}")
+            if count != len(all_chunks):
+                raise RuntimeError(f"Index verification failed: expected {len(all_chunks)}, found {count}")
+            if dimension == 0 and count:
+                sample = conn.execute(
+                    "SELECT embedding FROM chunk_embeddings_v2 WHERE model=? LIMIT 1", (model,)
+                ).fetchone()
+                dimension = len(json.loads(sample["embedding"]))
             conn.execute(
                 "UPDATE embedding_indexes SET dimension=?,status='ready',chunk_count=? WHERE model=?",
                 (dimension, count, model),
@@ -61,7 +74,7 @@ def migrate(batch_size: int = 32, activate: bool = True) -> dict:
                     "UPDATE embedding_indexes SET activated_at=? WHERE model=?",
                     (datetime.now(timezone.utc).isoformat(), model),
                 )
-        return {"model": model, "dimension": dimension, "chunks": len(chunks), "active": activate}
+        return {"model": model, "dimension": dimension, "chunks": len(all_chunks), "active": activate}
     except Exception:
         with connect() as conn:
             conn.execute("UPDATE embedding_indexes SET status='failed' WHERE model=?", (model,))
@@ -72,8 +85,9 @@ def main() -> None:
     parser = argparse.ArgumentParser(description="Build and verify the multilingual embedding index")
     parser.add_argument("--batch-size", type=int, default=32)
     parser.add_argument("--no-activate", action="store_true")
+    parser.add_argument("--resume", action="store_true", help="Embed only chunks missing from the current model index")
     args = parser.parse_args()
-    print(json.dumps(migrate(args.batch_size, not args.no_activate), ensure_ascii=False, indent=2))
+    print(json.dumps(migrate(args.batch_size, not args.no_activate, args.resume), ensure_ascii=False, indent=2))
 
 
 if __name__ == "__main__":

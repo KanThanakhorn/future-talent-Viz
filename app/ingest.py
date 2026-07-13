@@ -49,7 +49,10 @@ class Extracted:
 class ArticleParser(HTMLParser):
     SKIP = {"script", "style", "svg", "noscript", "nav", "footer", "header", "form"}
 
-    def __init__(self) -> None:
+    CONTENT_CLASSES = {"entry-content", "et_pb_post_content", "post-content", "article-body"}
+    NOISE_TOKENS = {"related", "recommend", "cookie", "social", "share", "posts-nav", "author-box"}
+
+    def __init__(self, tdri: bool = False) -> None:
         super().__init__()
         self.depth = 0
         self.article_depth = 0
@@ -58,8 +61,20 @@ class ArticleParser(HTMLParser):
         self.fallback: list[str] = []
         self.title = ""
         self.in_title = False
+        self.tdri = tdri
+        self.content_depth = 0
+        self.noise_depth = 0
 
     def handle_starttag(self, tag: str, attrs: list[tuple[str, str | None]]) -> None:
+        values = dict(attrs)
+        classes = set((values.get("class") or "").split())
+        marker = " ".join(classes | {values.get("id") or ""}).lower()
+        if self.tdri and classes & self.CONTENT_CLASSES:
+            self.content_depth += 1
+        elif self.content_depth:
+            self.content_depth += 1
+        if any(token in marker for token in self.NOISE_TOKENS):
+            self.noise_depth += 1
         if tag in self.SKIP:
             self.skip_depth += 1
         if tag in {"article", "main"}:
@@ -71,6 +86,10 @@ class ArticleParser(HTMLParser):
             self.fallback.append("\n")
 
     def handle_endtag(self, tag: str) -> None:
+        if self.content_depth:
+            self.content_depth -= 1
+        if self.noise_depth:
+            self.noise_depth -= 1
         if tag in self.SKIP and self.skip_depth:
             self.skip_depth -= 1
         if tag in {"article", "main"} and self.article_depth:
@@ -81,16 +100,19 @@ class ArticleParser(HTMLParser):
     def handle_data(self, data: str) -> None:
         if self.in_title:
             self.title += data
-        if self.skip_depth or not data.strip():
+        if self.skip_depth or self.noise_depth or not data.strip():
             return
         self.fallback.append(data)
-        if self.article_depth:
+        if (self.tdri and self.content_depth) or (not self.tdri and self.article_depth):
             self.parts.append(data)
 
     def text(self) -> str:
         chosen = self.parts if len(" ".join(self.parts)) > 500 else self.fallback
         value = html.unescape(" ".join(chosen))
-        return re.sub(r"\n\s*\n+", "\n\n", re.sub(r"[ \t]+", " ", value)).strip()
+        value = re.sub(r"\n\s*\n+", "\n\n", re.sub(r"[ \t]+", " ", value)).strip()
+        if self.tdri:
+            value = re.split(r"(?:เรื่องที่คุณอาจสนใจ|บทความที่เกี่ยวข้อง|อ่านเพิ่มเติม|Cookie Policy)", value, maxsplit=1)[0]
+        return value.strip()
 
 
 def _meta(path: Path) -> tuple[str, str, str | None, str]:
@@ -120,7 +142,7 @@ def extract_pdf(path: Path) -> Extracted:
                 review_pages.add(page_number)
     methods = ["text-layer" for _ in pages]
     title, source, published, topic = _meta(path)
-    return Extracted(str(path.resolve()), title, source, published, topic, "pdf", str(path), pages, methods, review_pages)
+    return Extracted(f"dataset://{path.name}", title, source, published, topic, "pdf", str(path), pages, methods, review_pages)
 
 
 def _is_url_reference(text: str) -> bool:
@@ -153,7 +175,7 @@ def extract_text_reference(path: Path) -> Extracted:
         )
         body = result.stdout
         charset = "utf-8"
-    parser = ArticleParser()
+    parser = ArticleParser(tdri="tdri.or.th" in raw.lower())
     parser.feed(body.decode(charset, errors="replace"))
     content = parser.text()
     if len(content) < 300:
@@ -189,18 +211,29 @@ def save_document(item: Extracted, force: bool = False) -> tuple[int, bool]:
     if not full_text.strip():
         raise ValueError("Refusing to insert empty document")
     with transaction() as conn:
-        old = conn.execute("SELECT id, content_hash FROM documents WHERE source_uri = ?", (item.source_uri,)).fetchone()
+        old = conn.execute(
+            "SELECT id, content_hash FROM documents WHERE source_uri=? OR (title=? AND source=?) ORDER BY id LIMIT 1",
+            (item.source_uri, item.title, item.source),
+        ).fetchone()
         if old and old["content_hash"] == digest and not force:
+            conn.execute("UPDATE documents SET source_uri=?,raw_path=?,updated_at=CURRENT_TIMESTAMP WHERE id=?",
+                         (item.source_uri, item.raw_path, old["id"]))
             return int(old["id"]), False
-        conn.execute(
+        if old:
+            document_id = int(old["id"])
+            conn.execute(
+                """UPDATE documents SET source_uri=?,title=?,source=?,published_date=?,topic=?,document_type=?,
+                   content_hash=?,status='ready',page_count=?,raw_path=?,updated_at=CURRENT_TIMESTAMP WHERE id=?""",
+                (item.source_uri, item.title, item.source, item.published_date, item.topic, item.document_type,
+                 digest, len(item.pages), item.raw_path, document_id),
+            )
+        else:
+            conn.execute(
             """INSERT INTO documents(source_uri,title,source,published_date,topic,document_type,content_hash,status,page_count,raw_path)
-               VALUES(?,?,?,?,?,?,?,?,?,?)
-               ON CONFLICT(source_uri) DO UPDATE SET title=excluded.title, source=excluded.source,
-               published_date=excluded.published_date, topic=excluded.topic, content_hash=excluded.content_hash,
-               status='ready', page_count=excluded.page_count, raw_path=excluded.raw_path, updated_at=CURRENT_TIMESTAMP""",
+               VALUES(?,?,?,?,?,?,?,?,?,?)""",
             (item.source_uri, item.title, item.source, item.published_date, item.topic, item.document_type, digest, "ready", len(item.pages), item.raw_path),
-        )
-        document_id = int(conn.execute("SELECT id FROM documents WHERE source_uri=?", (item.source_uri,)).fetchone()["id"])
+            )
+            document_id = int(conn.execute("SELECT id FROM documents WHERE source_uri=?", (item.source_uri,)).fetchone()["id"])
         conn.execute("DELETE FROM document_pages WHERE document_id=?", (document_id,))
         conn.execute("DELETE FROM chunks WHERE document_id=?", (document_id,))
         for page_number, (content, method) in enumerate(zip(item.pages, item.methods), 1):
@@ -223,8 +256,8 @@ def save_document(item: Extracted, force: bool = False) -> tuple[int, bool]:
     return document_id, True
 
 
-def seed_verified_data() -> None:
-    with transaction() as conn:
+def seed_verified_data(database: Path | None = None) -> None:
+    with transaction(database) as conn:
         wef = conn.execute("SELECT id FROM documents WHERE title='Future of Jobs Report 2025'").fetchone()
         if not wef:
             return
@@ -253,9 +286,13 @@ def seed_verified_data() -> None:
         ]
         for rank, (name, category) in enumerate(skills, 1):
             conn.execute(
-                "INSERT OR IGNORE INTO skills(name,category,source_document_id,source_page) VALUES(?,?,?,?)",
-                (name, category, document_id, 35),
+                """INSERT INTO skills(name,category,source_document_id,source_page) VALUES(?,?,?,?)
+                   ON CONFLICT(name) DO UPDATE SET category=excluded.category,
+                   source_document_id=excluded.source_document_id,source_page=excluded.source_page""",
+                (name, category, document_id, 37),
             )
+        from .industry_data import seed_industry_data
+        seed_industry_data(conn)
         from .analytics import seed_analytics
 
         seed_analytics(conn)
@@ -269,11 +306,13 @@ def log_failure(source_uri: str, message: str) -> None:
         )
 
 
-def run(dataset: Path, force: bool = False) -> int:
+def run(dataset: Path, force: bool = False, kind: str = "all") -> int:
     init_db()
     successes = 0
     for path in sorted(dataset.iterdir()):
         if path.suffix.lower() not in {".pdf", ".txt"}:
+            continue
+        if kind != "all" and ((kind == "web") != (path.suffix.lower() == ".txt")):
             continue
         try:
             extracted = extract_pdf(path) if path.suffix.lower() == ".pdf" else extract_text_reference(path)
@@ -291,8 +330,9 @@ def main() -> None:
     parser = argparse.ArgumentParser(description="Ingest Future Ready Talent source documents")
     parser.add_argument("--dataset", type=Path, default=settings.dataset_path)
     parser.add_argument("--force", action="store_true")
+    parser.add_argument("--kind", choices=("all", "pdf", "web"), default="all")
     args = parser.parse_args()
-    count = run(args.dataset, args.force)
+    count = run(args.dataset, args.force, args.kind)
     LOG.info("Finished: %s source(s) available", count)
 
 

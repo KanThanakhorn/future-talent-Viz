@@ -52,7 +52,7 @@ def seed_analytics(conn: sqlite3.Connection) -> None:
     sources = {
         row["title"]: int(row["id"])
         for row in conn.execute(
-            "SELECT id,title FROM documents WHERE title IN (?,?)",
+            "SELECT MIN(id) AS id,title FROM documents WHERE title IN (?,?) GROUP BY title",
             ("Future of Jobs Report 2025", "In-depth Research on Youth NEET in Thailand"),
         )
     }

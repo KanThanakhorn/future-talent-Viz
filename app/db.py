@@ -19,13 +19,37 @@ def connect(path: Path | None = None) -> sqlite3.Connection:
 
 def init_db(path: Path | None = None) -> None:
     with connect(path) as conn:
-        conn.executescript((ROOT / "app" / "schema.sql").read_text(encoding="utf-8"))
+        # Old databases may still contain duplicate title/source pairs. The
+        # repair command removes them before this new index can be installed.
+        schema = (ROOT / "app" / "schema.sql").read_text(encoding="utf-8")
+        try:
+            conn.executescript(schema)
+        except sqlite3.IntegrityError as exc:
+            if "documents.title, documents.source" not in str(exc):
+                raise
+            conn.executescript(schema.replace(
+                "CREATE UNIQUE INDEX IF NOT EXISTS uq_documents_title_source ON documents(title, source);", ""
+            ))
         columns = {row[1] for row in conn.execute("PRAGMA table_info(chunks)")}
         if "source_type" not in columns:
             conn.execute(
                 "ALTER TABLE chunks ADD COLUMN source_type TEXT NOT NULL DEFAULT 'narrative' "
                 "CHECK (source_type IN ('narrative', 'chart_ocr'))"
             )
+        additions = {
+            "industries": (("source_document_id", "INTEGER REFERENCES documents(id)"), ("source_page", "INTEGER")),
+            "job_demand": (("demand_value", "REAL"), ("demand_unit", "TEXT")),
+            "skill_requirements": (
+                ("source_document_id", "INTEGER REFERENCES documents(id)"),
+                ("source_page", "INTEGER"),
+                ("evidence_scope", "TEXT NOT NULL DEFAULT 'industry'"),
+            ),
+        }
+        for table, specs in additions.items():
+            existing = {row[1] for row in conn.execute(f"PRAGMA table_info({table})")}
+            for name, definition in specs:
+                if name not in existing:
+                    conn.execute(f"ALTER TABLE {table} ADD COLUMN {name} {definition}")
         from .analytics import seed_analytics
 
         seed_analytics(conn)

@@ -43,7 +43,9 @@ CREATE TABLE IF NOT EXISTS extraction_logs (
 CREATE TABLE IF NOT EXISTS industries (
     id INTEGER PRIMARY KEY,
     name TEXT NOT NULL UNIQUE,
-    description TEXT
+    description TEXT,
+    source_document_id INTEGER REFERENCES documents(id),
+    source_page INTEGER
 );
 
 CREATE TABLE IF NOT EXISTS skills (
@@ -59,6 +61,8 @@ CREATE TABLE IF NOT EXISTS job_demand (
     industry_id INTEGER NOT NULL REFERENCES industries(id),
     job_role TEXT NOT NULL,
     headcount_needed INTEGER,
+    demand_value REAL,
+    demand_unit TEXT,
     year_start INTEGER NOT NULL,
     year_end INTEGER NOT NULL,
     metric_type TEXT NOT NULL DEFAULT 'demand',
@@ -72,6 +76,9 @@ CREATE TABLE IF NOT EXISTS skill_requirements (
     job_demand_id INTEGER NOT NULL REFERENCES job_demand(id) ON DELETE CASCADE,
     skill_id INTEGER NOT NULL REFERENCES skills(id),
     importance_level REAL NOT NULL CHECK (importance_level BETWEEN 0 AND 100),
+    source_document_id INTEGER NOT NULL REFERENCES documents(id),
+    source_page INTEGER NOT NULL,
+    evidence_scope TEXT NOT NULL DEFAULT 'industry',
     PRIMARY KEY(job_demand_id, skill_id)
 );
 
@@ -150,3 +157,4 @@ CREATE INDEX IF NOT EXISTS idx_chunks_document ON chunks(document_id);
 CREATE INDEX IF NOT EXISTS idx_embeddings_model ON chunk_embeddings_v2(model);
 CREATE INDEX IF NOT EXISTS idx_analytics_chart ON analytics_metrics(chart_key, sort_order);
 CREATE INDEX IF NOT EXISTS idx_job_demand_year ON job_demand(year_start, year_end);
+CREATE UNIQUE INDEX IF NOT EXISTS uq_documents_title_source ON documents(title, source);
