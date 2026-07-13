@@ -1,0 +1,10 @@
+.env
+.venv/
+.python-deps/
+__pycache__/
+*.py[cod]
+data/*.db
+data/*.db-*
+data/raw-web/
+data/extracted/
+data/ocr/
