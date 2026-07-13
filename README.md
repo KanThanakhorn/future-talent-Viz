@@ -34,11 +34,15 @@ uvicorn app.main:app --reload
 เปิด `http://localhost:8000` และ API docs ที่ `http://localhost:8000/docs` หรือใช้ Docker:
 
 ```bash
-docker compose build
+export DOCKER_UID="$(id -u)"
+export DOCKER_GID="$(id -g)"
+docker compose build --pull
 docker compose run --rm app python -m app.ingest
 docker compose run --rm app python -m app.reindex_embeddings
-docker compose up
+docker compose up -d
 ```
+
+คู่มือ build, healthcheck, rebuild และการแก้ Docker socket permission อยู่ที่ [`docs/docker.md`](docs/docker.md)
 
 การ ingest รอบถัดไปจะข้ามเอกสารที่ hash ไม่เปลี่ยน URL ที่ fetch ไม่สำเร็จหรือได้ข้อความสั้นผิดปกติจะถูก log และไม่สร้าง document ว่าง
 
