@@ -41,7 +41,7 @@ def cosine(left: list[float], right: list[float]) -> float:
 def _base_rows(conn) -> list[dict]:
     return [dict(row) for row in conn.execute(
         """SELECT c.id,c.content,c.page_start,c.page_end,c.embedding,c.source_type,
-                  d.id AS document_id,d.title,d.source,d.source_uri
+                  d.id AS document_id,d.title,d.source,d.source_uri,d.document_type
            FROM chunks c JOIN documents d ON d.id=c.document_id WHERE d.status='ready'"""
     )]
 

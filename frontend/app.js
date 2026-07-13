@@ -2,6 +2,41 @@ const fmt = new Intl.NumberFormat('th-TH');
 const $ = (id) => document.getElementById(id);
 const esc = (value) => String(value ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 
+const navLinks = [...document.querySelectorAll('.sidebar nav a[href^="#"]')];
+const navSections = navLinks.map(link => document.querySelector(link.hash)).filter(Boolean);
+let navClickLockUntil = 0;
+let navFrame = 0;
+
+function setActiveNav(sectionId) {
+  navLinks.forEach(link => {
+    const active = link.hash === `#${sectionId}`;
+    link.classList.toggle('active', active);
+    if (active) link.setAttribute('aria-current', 'location');
+    else link.removeAttribute('aria-current');
+  });
+}
+
+function syncActiveNav() {
+  navFrame = 0;
+  if (Date.now() < navClickLockUntil || !navSections.length) return;
+  const marker = window.scrollY + window.innerHeight * 0.35;
+  let current = navSections[0];
+  navSections.forEach(section => { if (section.offsetTop <= marker) current = section; });
+  if (window.scrollY + window.innerHeight >= document.documentElement.scrollHeight - 2) current = navSections.at(-1);
+  setActiveNav(current.id);
+}
+
+navLinks.forEach(link => link.addEventListener('click', () => {
+  navClickLockUntil = Date.now() + 800;
+  setActiveNav(link.hash.slice(1));
+  window.setTimeout(syncActiveNav, 850);
+}));
+window.addEventListener('scroll', () => {
+  if (!navFrame) navFrame = window.requestAnimationFrame(syncActiveNav);
+}, {passive: true});
+window.addEventListener('resize', syncActiveNav);
+setActiveNav(location.hash.slice(1) || 'overview');
+
 async function api(path, options) {
   const response = await fetch(path, options);
   if (!response.ok) throw new Error(await response.text());
@@ -26,8 +61,14 @@ function drawChart(rows) {
   if (rows[0]) $('chartSource').innerHTML = sourceLink(rows[0]);
 }
 
+function sourceHref(row, page = row.source_page) {
+  if (row.document_type === 'web' && /^https?:\/\//i.test(row.source_uri || '')) return row.source_uri;
+  return `/api/documents/${row.document_id}/source#page=${encodeURIComponent(page || 1)}`;
+}
+
 function sourceLink(row) {
-  return `<a class="source-link" target="_blank" href="/api/documents/${row.document_id}/pages/${row.source_page}">↗ ${esc(row.source_title)} · หน้า ${row.source_page}</a>`;
+  const location = row.document_type === 'web' ? 'เว็บไซต์ต้นฉบับ' : `หน้า ${row.source_page}`;
+  return `<a class="source-link" target="_blank" rel="noopener noreferrer" href="${esc(sourceHref(row))}">↗ ${esc(row.source_title)} · ${location}</a>`;
 }
 
 function renderBars(target, rows, options = {}) {
@@ -83,7 +124,7 @@ $('chatForm').addEventListener('submit', async (event) => {
     const result = await api('/api/chat', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({question})});
     pending.textContent = result.answer;
     const cites = document.createElement('div'); cites.className = 'citations';
-    result.citations.forEach(c => { const a = document.createElement('a'); a.className = 'citation'; a.href = `/api/documents/${c.document_id}/pages/${c.page_start}`; a.target = '_blank'; a.textContent = `[${c.index}] ${c.title} · หน้า ${c.page_start}${c.page_end !== c.page_start ? `–${c.page_end}` : ''} · ${c.source_type === 'chart_ocr' ? 'OCR chart' : 'narrative'}`; cites.appendChild(a); });
+    result.citations.forEach(c => { const a = document.createElement('a'); a.className = 'citation'; a.href = sourceHref(c, c.page_start); a.target = '_blank'; a.rel = 'noopener noreferrer'; const location = c.document_type === 'web' ? 'เว็บไซต์ต้นฉบับ' : `หน้า ${c.page_start}${c.page_end !== c.page_start ? `–${c.page_end}` : ''}`; a.textContent = `[${c.index}] ${c.title} · ${location} · ${c.source_type === 'chart_ocr' ? 'OCR chart' : 'narrative'}`; cites.appendChild(a); });
     pending.after(cites);
   } catch (_) { pending.textContent = 'เกิดข้อผิดพลาดขณะค้นข้อมูล กรุณาลองใหม่'; }
   finally { button.disabled = false; messages.scrollTop = messages.scrollHeight; }

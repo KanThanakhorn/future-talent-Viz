@@ -7,7 +7,7 @@ from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field
 
-from .config import ROOT
+from .config import ROOT, settings
 from .db import connect, init_db
 from .rag import answer
 from .retrieval import retrieve
@@ -58,13 +58,15 @@ def dashboard() -> dict:
     with connect() as conn:
         demand = [dict(row) for row in conn.execute(
             """SELECT j.job_role,j.headcount_needed,j.year_start,j.year_end,j.metric_type,j.source_page,
-                      i.name AS industry,d.title AS source_title,d.id AS document_id
+                      i.name AS industry,d.title AS source_title,d.id AS document_id,
+                      d.document_type,d.source_uri
                FROM job_demand j JOIN industries i ON i.id=j.industry_id
                JOIN documents d ON d.id=j.source_document_id
                WHERE j.headcount_needed IS NOT NULL ORDER BY j.headcount_needed DESC"""
         )]
         skills = [dict(row) for row in conn.execute(
-            """SELECT s.name,s.category,s.source_page,d.title AS source_title,d.id AS document_id
+            """SELECT s.name,s.category,s.source_page,d.title AS source_title,d.id AS document_id,
+                      d.document_type,d.source_uri
                FROM skills s JOIN documents d ON d.id=s.source_document_id ORDER BY s.id LIMIT 10"""
         )]
         totals = dict(conn.execute(
@@ -76,7 +78,7 @@ def dashboard() -> dict:
         ).fetchone())
         chart_rows = [dict(row) for row in conn.execute(
             """SELECT a.chart_key,a.series,a.label,a.value,a.unit,a.period,a.scope,a.note,a.source_page,
-                      d.id AS document_id,d.title AS source_title
+                      d.id AS document_id,d.title AS source_title,d.document_type,d.source_uri
                FROM analytics_metrics a JOIN documents d ON d.id=a.source_document_id
                ORDER BY a.chart_key,a.sort_order"""
         )]
@@ -114,6 +116,7 @@ def chat(body: ChatRequest) -> dict:
             "title": item["title"],
             "source": item["source"],
             "source_uri": item["source_uri"],
+            "document_type": item["document_type"],
             "page_start": item["page_start"],
             "page_end": item["page_end"],
             "score": round(item["score"], 4),
@@ -141,13 +144,25 @@ def document_page(document_id: int, page_number: int) -> dict:
 @app.get("/api/documents/{document_id}/source", include_in_schema=False)
 def document_source(document_id: int) -> FileResponse:
     with connect() as conn:
-        row = conn.execute("SELECT raw_path,document_type,title FROM documents WHERE id=?", (document_id,)).fetchone()
-    if not row or row["document_type"] != "pdf" or not row["raw_path"]:
+        row = conn.execute(
+            "SELECT raw_path,source_uri,document_type,title FROM documents WHERE id=?", (document_id,)
+        ).fetchone()
+    if not row or row["document_type"] != "pdf":
         raise HTTPException(404, "Local source file not found")
-    path = Path(row["raw_path"]).resolve()
+    path = Path(row["raw_path"]).resolve() if row["raw_path"] else Path()
+    if not path.is_file():
+        # raw_path can contain the host path while the same database is mounted
+        # in Docker. Resolve the stable dataset URI against this runtime.
+        filename = Path(row["source_uri"].removeprefix("dataset://")).name
+        path = (settings.dataset_path / filename).resolve()
     if not path.is_file():
         raise HTTPException(404, "Local source file not found")
-    return FileResponse(path, media_type="application/pdf", filename=path.name)
+    return FileResponse(
+        path,
+        media_type="application/pdf",
+        filename=path.name,
+        content_disposition_type="inline",
+    )
 
 
 @app.get("/", include_in_schema=False)
