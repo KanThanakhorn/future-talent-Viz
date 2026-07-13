@@ -91,7 +91,12 @@ def repair(database: Path, backup_dump: Path) -> None:
             for doc_id, uri in stable.items():
                 conn.execute("UPDATE documents SET source_uri=?,updated_at=CURRENT_TIMESTAMP WHERE id=?", (uri, doc_id))
             conn.execute("CREATE UNIQUE INDEX IF NOT EXISTS uq_documents_title_source ON documents(title,source)")
-            analytics = conn.execute("SELECT COUNT(*) FROM analytics_metrics").fetchone()[0]
+            analytics = conn.execute(
+                """SELECT COUNT(*) FROM analytics_metrics WHERE chart_key IN (
+                       'skill_change','macrotrends','neet_provinces','neet_groups',
+                       'neet_demographics','readiness_gap'
+                   )"""
+            ).fetchone()[0]
             if analytics != 37:
                 raise RuntimeError(f"Expected 37 analytics rows after repair, found {analytics}")
             violations = conn.execute("PRAGMA foreign_key_check").fetchall()

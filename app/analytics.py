@@ -47,30 +47,78 @@ NEET_METRICS = [
     ("readiness_gap", "Thai readiness", "NEET youth who want to develop skills", 18.9, "% classified NEET", "2021", "Thailand", 1, 45, "Aggregate readiness, not measured per skill"),
 ]
 
+THAI_LABOUR_METRICS = [
+    ("thai_job_postings", "Q1 2024", "Professional Sales", 14163, "positions", "2024 Q1", "Thailand online job postings", 1, 8, "TDRI-JPA; 15 job boards; not representative of all Thai hiring"),
+    ("thai_job_postings", "Q1 2024", "Administrative Support", 12558, "positions", "2024 Q1", "Thailand online job postings", 2, 8, None),
+    ("thai_job_postings", "Q1 2024", "Information Support and Services", 7013, "positions", "2024 Q1", "Thailand online job postings", 3, 8, None),
+    ("thai_job_postings", "Q1 2024", "Engineering and Technology", 6858, "positions", "2024 Q1", "Thailand online job postings", 4, 8, None),
+    ("thai_job_postings", "Q1 2024", "Marketing Management", 6154, "positions", "2024 Q1", "Thailand online job postings", 5, 8, None),
+    ("thai_job_postings", "Q1 2024", "Operations Management", 5331, "positions", "2024 Q1", "Thailand online job postings", 6, 8, None),
+]
+
+STEM_METRICS = [
+    ("stem_career_alignment", "STEM occupation", "ปวช.", 6, "% graduates", None, "Thailand", 1, 11, "Share of STEM graduates working in STEM occupations"),
+    ("stem_career_alignment", "STEM occupation", "ปวส.", 9, "% graduates", None, "Thailand", 2, 11, None),
+    ("stem_career_alignment", "STEM occupation", "ปริญญาตรี", 41, "% graduates", None, "Thailand", 3, 11, None),
+    ("stem_career_alignment", "STEM occupation", "ปริญญาโทขึ้นไป", 62, "% graduates", None, "Thailand", 4, 11, None),
+]
+
+HUMAN_CAPITAL_METRICS = [
+    ("human_capital_training", "ได้รับการฝึกอบรม", "ประชากรอายุ 15–59 ปี", 2.26, "% population", "2021 Q1", "Thailand", 1, 38, None),
+    ("human_capital_training", "ได้รับการฝึกอบรม", "กำลังแรงงาน", 2.66, "% workforce", "2021 Q1", "Thailand", 2, 38, None),
+    ("human_capital_training", "ต้องการการฝึกอบรม", "ประชากรอายุ 15–59 ปี", 11.21, "% population", "2021 Q1", "Thailand", 3, 38, None),
+    ("human_capital_training", "ต้องการการฝึกอบรม", "กำลังแรงงาน", 11.65, "% workforce", "2021 Q1", "Thailand", 4, 38, None),
+]
+
 
 def seed_analytics(conn: sqlite3.Connection) -> None:
+    titles = (
+        "Future of Jobs Report 2025",
+        "In-depth Research on Youth NEET in Thailand",
+        "แนวโน้มความต้องการแรงงานในอุตสาหกรรมต่างๆ และทักษะอาชีพที่แรงงานไทยควรต้องมี",
+        "การพัฒนาการศึกษาและกำลังคนด้านวิทยาศาสตร์ เทคโนโลยี วิศวกรรมศาสตร์ และคณิตศาสตร์ ของประเทศไทย",
+        "การพัฒนาทุนมนุษย์ในประเทศไทย : การศึกษาช่องว่าง อุปสรรค และทางเลือกเชิงนโยบาย",
+    )
     sources = {
         row["title"]: int(row["id"])
         for row in conn.execute(
-            "SELECT MIN(id) AS id,title FROM documents WHERE title IN (?,?) GROUP BY title",
-            ("Future of Jobs Report 2025", "In-depth Research on Youth NEET in Thailand"),
+            f"SELECT MIN(id) AS id,title FROM documents WHERE title IN ({','.join('?' for _ in titles)}) GROUP BY title",
+            titles,
         )
     }
     source_sets = [
         ("Future of Jobs Report 2025", WEF_METRICS),
         ("In-depth Research on Youth NEET in Thailand", NEET_METRICS),
+        (titles[2], THAI_LABOUR_METRICS),
+        (titles[3], STEM_METRICS),
+        (titles[4], HUMAN_CAPITAL_METRICS),
     ]
     for title, metrics in source_sets:
         document_id = sources.get(title)
         if not document_id:
             continue
         for metric in metrics:
-            conn.execute(
-                """INSERT INTO analytics_metrics(
-                       chart_key,series,label,value,unit,period,scope,sort_order,source_document_id,source_page,note
-                   ) VALUES(?,?,?,?,?,?,?,?,?,?,?)
-                   ON CONFLICT(chart_key,series,label,period,source_document_id) DO UPDATE SET
-                       value=excluded.value,unit=excluded.unit,scope=excluded.scope,
-                       sort_order=excluded.sort_order,source_page=excluded.source_page,note=excluded.note""",
-                (*metric[:8], document_id, *metric[8:]),
-            )
+            chart_key, series, label, value, unit, period, scope, sort_order, source_page, note = metric
+            matches = conn.execute(
+                """SELECT id FROM analytics_metrics WHERE chart_key=? AND series=? AND label=?
+                   AND period IS ? AND source_document_id=? ORDER BY id""",
+                (chart_key, series, label, period, document_id),
+            ).fetchall()
+            if matches:
+                keep = int(matches[0]["id"])
+                conn.execute(
+                    """UPDATE analytics_metrics SET value=?,unit=?,scope=?,sort_order=?,source_page=?,note=?
+                       WHERE id=?""",
+                    (value, unit, scope, sort_order, source_page, note, keep),
+                )
+                if len(matches) > 1:
+                    conn.executemany("DELETE FROM analytics_metrics WHERE id=?", [(row["id"],) for row in matches[1:]])
+            else:
+                conn.execute(
+                    """INSERT INTO analytics_metrics(
+                           chart_key,series,label,value,unit,period,scope,sort_order,
+                           source_document_id,source_page,note
+                       ) VALUES(?,?,?,?,?,?,?,?,?,?,?)""",
+                    (chart_key, series, label, value, unit, period, scope, sort_order,
+                     document_id, source_page, note),
+                )

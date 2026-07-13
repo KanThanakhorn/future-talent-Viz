@@ -46,6 +46,8 @@ docker compose up -d
 
 การ ingest รอบถัดไปจะข้ามเอกสารที่ hash ไม่เปลี่ยน URL ที่ fetch ไม่สำเร็จหรือได้ข้อความสั้นผิดปกติจะถูก log และไม่สร้าง document ว่าง
 
+หากมีทั้ง URL reference และ PDF ฉบับเต็มของรายงาน TDRI/UNICEF ชุดเดียวกัน pipeline จะใช้ PDF เป็นแหล่งหลักและข้าม `.txt` ที่ถูกแทนที่ เพื่อรักษา document ID เดิมและให้ citation เปิดไฟล์จริงพร้อมเลขหน้า
+
 ## OCR และ RAG
 
 Pipeline ใช้ text layer ก่อนและ flag หน้าที่ข้อความน้อยให้ review ใน `extraction_logs` หากติดตั้ง Tesseract พร้อมภาษาไทย/อังกฤษแล้วให้รัน:
@@ -62,9 +64,9 @@ Retrieval ใช้ SQLite FTS5/BM25 ร่วมกับ multilingual ONNX emb
 
 หากตั้ง `OPENAI_API_KEY` chat จะให้โมเดลสังเคราะห์คำตอบจาก context ที่ค้นได้; ถ้าไม่ตั้ง ระบบคืน grounded extract โดยตรง
 
-ตัวเลขบน dashboard query จาก `job_demand` ใน SQL เท่านั้น ไม่ผ่าน RAG ข้อมูล seed ที่ยืนยันแล้วระบุ `source_document_id` และ `source_page` ทุกแถว
+ตัวเลขบน dashboard query จาก `job_demand` และ `analytics_metrics` ใน SQL เท่านั้น ไม่ผ่าน RAG ข้อมูล seed ที่ยืนยันแล้วระบุ `source_document_id` และ `source_page` ทุกแถว
 
-Dashboard มี 7 มุมมอง: skills rise/decline, jobs created/displaced, macrotrends, จังหวัด NEET, NEET 4 กลุ่ม, gender/age/education และ demand-vs-readiness gap กราฟสุดท้ายแสดงสถานะ partial เพราะยังไม่มี readiness รายทักษะหรือ curriculum coverage และจะไม่สร้างตัวเลขแทนข้อมูลที่ขาด
+Dashboard มีมุมมอง global demand, Thai readiness และ demand-vs-readiness พร้อมหลักฐาน PDF ไทยเพิ่มอีกสามชุด: งานเปิดรับจาก TDRI-JPA, สัดส่วนผู้จบ STEM ที่ทำงานอาชีพ STEM และช่องว่างการเข้าถึง/ความต้องการฝึกอบรม กราฟสุดท้ายยังแสดงสถานะ partial เพราะไม่มี readiness รายทักษะหรือ curriculum coverage และจะไม่สร้างตัวเลขแทนข้อมูลที่ขาด
 
 ## API หลัก
 

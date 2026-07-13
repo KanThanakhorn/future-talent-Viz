@@ -29,6 +29,30 @@ METADATA = {
     "stem-education-and-workforce.txt": ("STEM Education and Workforce in Thailand", "TDRI", "2025-07-01", "STEM workforce"),
     "thai-youth-neet-motivation.txt": ("Thai Youth NEET Motivation", "UNICEF Thailand", "2023-03-01", "Youth NEET"),
     "human-capital-unicef.txt": ("Human Capital Development in Thailand", "TDRI", "2026-01-29", "Human capital"),
+    "2024_06_std_scg.pdf": (
+        "แนวโน้มความต้องการแรงงานในอุตสาหกรรมต่างๆ และทักษะอาชีพที่แรงงานไทยควรต้องมี",
+        "TDRI", "2024-06-01", "Labour demand and future skills",
+    ),
+    "2024_11_STD_660202.pdf": (
+        "การพัฒนาการศึกษาและกำลังคนด้านวิทยาศาสตร์ เทคโนโลยี วิศวกรรมศาสตร์ และคณิตศาสตร์ ของประเทศไทย",
+        "TDRI", "2024-11-01", "STEM workforce",
+    ),
+    "unicef-Human-Capital-Development-in-Thailand-Summary-Report-TH.pdf-2.pdf": (
+        "การพัฒนาทุนมนุษย์ในประเทศไทย : การศึกษาช่องว่าง อุปสรรค และทางเลือกเชิงนโยบาย",
+        "UNICEF Thailand", None, "Human capital",
+    ),
+}
+
+PDF_REPLACES_WEB = {
+    "2024_06_std_scg.pdf": "https://tdri.or.th/2024/06/thailand-labour-demand-and-future-skills/",
+    "2024_11_STD_660202.pdf": "https://tdri.or.th/2025/07/660202-stem-education-and-workforce/",
+    "unicef-Human-Capital-Development-in-Thailand-Summary-Report-TH.pdf-2.pdf": "https://tdri.or.th/2026/01/human-capital-unicef/",
+}
+
+WEB_REPLACED_BY_PDF = {
+    "thailand-labour-demand-and-future-skills.txt": "2024_06_std_scg.pdf",
+    "stem-education-and-workforce.txt": "2024_11_STD_660202.pdf",
+    "human-capital-unicef.txt": "unicef-Human-Capital-Development-in-Thailand-Summary-Report-TH.pdf-2.pdf",
 }
 
 
@@ -44,6 +68,7 @@ class Extracted:
     pages: list[str]
     methods: list[str]
     review_pages: set[int]
+    replaces_source_uri: str | None = None
 
 
 class ArticleParser(HTMLParser):
@@ -142,7 +167,10 @@ def extract_pdf(path: Path) -> Extracted:
                 review_pages.add(page_number)
     methods = ["text-layer" for _ in pages]
     title, source, published, topic = _meta(path)
-    return Extracted(f"dataset://{path.name}", title, source, published, topic, "pdf", str(path), pages, methods, review_pages)
+    return Extracted(
+        f"dataset://{path.name}", title, source, published, topic, "pdf", str(path),
+        pages, methods, review_pages, PDF_REPLACES_WEB.get(path.name),
+    )
 
 
 def _is_url_reference(text: str) -> bool:
@@ -212,8 +240,9 @@ def save_document(item: Extracted, force: bool = False) -> tuple[int, bool]:
         raise ValueError("Refusing to insert empty document")
     with transaction() as conn:
         old = conn.execute(
-            "SELECT id, content_hash FROM documents WHERE source_uri=? OR (title=? AND source=?) ORDER BY id LIMIT 1",
-            (item.source_uri, item.title, item.source),
+            """SELECT id, content_hash FROM documents
+               WHERE source_uri IN (?,?) OR (title=? AND source=?) ORDER BY id LIMIT 1""",
+            (item.source_uri, item.replaces_source_uri or item.source_uri, item.title, item.source),
         ).fetchone()
         if old and old["content_hash"] == digest and not force:
             conn.execute("UPDATE documents SET source_uri=?,raw_path=?,updated_at=CURRENT_TIMESTAMP WHERE id=?",
@@ -313,6 +342,10 @@ def run(dataset: Path, force: bool = False, kind: str = "all") -> int:
         if path.suffix.lower() not in {".pdf", ".txt"}:
             continue
         if kind != "all" and ((kind == "web") != (path.suffix.lower() == ".txt")):
+            continue
+        replacement = WEB_REPLACED_BY_PDF.get(path.name)
+        if replacement and (dataset / replacement).is_file():
+            LOG.info("Skipped superseded web reference %s; using %s", path.name, replacement)
             continue
         try:
             extracted = extract_pdf(path) if path.suffix.lower() == ".pdf" else extract_text_reference(path)

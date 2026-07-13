@@ -58,6 +58,7 @@ class CoreTests(unittest.TestCase):
                 for source_uri, title in [
                     ("file:///wef.pdf", "Future of Jobs Report 2025"),
                     ("file:///neet.pdf", "In-depth Research on Youth NEET in Thailand"),
+                    ("file:///stem.pdf", "การพัฒนาการศึกษาและกำลังคนด้านวิทยาศาสตร์ เทคโนโลยี วิศวกรรมศาสตร์ และคณิตศาสตร์ ของประเทศไทย"),
                 ]:
                     conn.execute(
                         """INSERT INTO documents(source_uri,title,source,topic,document_type,content_hash)
@@ -65,10 +66,15 @@ class CoreTests(unittest.TestCase):
                         (source_uri, title, "test"),
                     )
                 seed_analytics(conn)
+                seed_analytics(conn)
                 count = conn.execute("SELECT COUNT(*) FROM analytics_metrics").fetchone()[0]
                 untraced = conn.execute("SELECT COUNT(*) FROM analytics_metrics WHERE source_page IS NULL").fetchone()[0]
                 self.assertGreaterEqual(count, 30)
                 self.assertEqual(untraced, 0)
+                stem_count = conn.execute(
+                    "SELECT COUNT(*) FROM analytics_metrics WHERE chart_key='stem_career_alignment'"
+                ).fetchone()[0]
+                self.assertEqual(stem_count, 4)
 
 
 if __name__ == "__main__":

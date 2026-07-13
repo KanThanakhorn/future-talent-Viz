@@ -75,7 +75,8 @@ function renderBars(target, rows, options = {}) {
   const max = Math.max(...rows.map(r => Math.abs(r.value)), 1);
   $(target).innerHTML = rows.map(row => {
     const width = Math.max(2, Math.abs(row.value) / max * 100);
-    const tone = row.value < 0 || row.series === 'Declining' ? 'negative' : (row.series === 'Technology' ? 'accent' : '');
+    const tone = row.value < 0 || row.series === 'Declining' ? 'negative' :
+      (row.series === 'Technology' ? 'accent' : (row.series === 'ต้องการการฝึกอบรม' ? 'demand' : ''));
     return `<div class="bar-row"><div class="bar-meta"><span>${esc(row.label)}</span><strong>${fmt.format(row.value)}${row.unit.startsWith('%') ? '%' : ''}</strong></div><div class="bar-track"><i class="${tone}" style="width:${width}%"></i></div><div class="bar-foot"><small>${esc(row.series)} · ${esc(row.scope)}</small>${sourceLink(row)}</div></div>`;
   }).join('');
 }
@@ -109,6 +110,9 @@ async function load() {
     renderBars('provinceChart', dashboard.charts.neet_provinces || []);
     renderGroups(dashboard.charts.neet_groups || []);
     renderDemographics(dashboard.charts.neet_demographics || []);
+    renderBars('thaiJobPostingsChart', dashboard.charts.thai_job_postings || []);
+    renderBars('stemCareerChart', dashboard.charts.stem_career_alignment || []);
+    renderBars('humanCapitalTrainingChart', dashboard.charts.human_capital_training || []);
     renderGap(dashboard.charts.demand_readiness_gap);
     $('documents').innerHTML = docs.map(d => `<a class="document" href="${d.document_type === 'pdf' ? `/api/documents/${d.id}/source` : d.source_uri}" target="_blank" rel="noreferrer"><span class="document-icon">${d.document_type.toUpperCase()}</span><div><h3>${d.title}</h3><p>${d.source} · ${d.topic}</p></div><span>${d.page_count || 1} หน้า</span><small>${d.review_pages ? `review ${d.review_pages}` : 'พร้อมใช้'} ↗</small></a>`).join('') || '<div class="loading">ยังไม่มีเอกสาร — รัน ingestion ก่อน</div>';
   } catch (error) { $('systemStatus').textContent = 'ไม่สามารถโหลดข้อมูล'; console.error(error); }
