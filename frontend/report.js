@@ -34,6 +34,14 @@ function donut(rows){
   const stops=rows.map((r,i)=>{const start=cursor;cursor+=r.value;return `${colors[i]} ${start}% ${cursor}%`;}).join(',');
   return `<div class="donut-wrap"><div class="donut" style="background:conic-gradient(${stops})"><div><strong>${fmt.format(rows.reduce((s,r)=>s+r.value,0))}%</strong><span>รวมจากตาราง</span></div></div><div class="donut-list">${rows.map((r,i)=>`<div><i style="background:${colors[i]}"></i><span>${esc(r.label)}</span><strong>${fmt.format(r.value)}%</strong>${sourceBadge(r.source_page,r.note)}</div>`).join('')}</div></div>`;
 }
+function lineChart(rows){
+  const groups=rows.reduce((all,row)=>((all[row.series]??=[]).push(row),all),{}), values=rows.map(r=>r.value||0);
+  const min=Math.min(...values,0),max=Math.max(...values,1),span=max-min||1,colors=['#1d6a4e','#ff7559','#5579b8','#b27b22'];
+  const paths=Object.entries(groups).map(([name,items],index)=>{const points=items.map((r,i)=>`${items.length===1?50:i/(items.length-1)*100},${92-(r.value-min)/span*84}`).join(' ');return `<polyline points="${points}" fill="none" stroke="${colors[index%colors.length]}" stroke-width="2" vector-effect="non-scaling-stroke"><title>${esc(name)}</title></polyline>`;}).join('');
+  const labels=(Object.values(groups)[0]||[]).map((r,i,a)=>`<span style="left:${a.length===1?50:i/(a.length-1)*100}%">${esc(r.label)}</span>`).join('');
+  return `<div class="line-chart"><svg viewBox="0 0 100 100" preserveAspectRatio="none" aria-label="trend chart">${paths}</svg><div class="line-labels">${labels}</div><div class="line-legend">${Object.keys(groups).map((name,i)=>`<span><i style="background:${colors[i%colors.length]}"></i>${esc(name)}</span>`).join('')}</div>${sourceBadge(rows[0]?.source_page,rows[0]?.note)}</div>`;
+}
+function statCards(rows){return `<div class="stat-grid">${rows.map(r=>`<article><strong>${valueText(r)}</strong><p>${esc(r.label)}</p>${sourceBadge(r.source_page,r.note)}</article>`).join('')}</div>`;}
 function section(id,kicker,title,visual,index){return `<section class="story-section" id="${id}"><div class="story-head"><span>${String(index).padStart(2,'0')}</span><div><p>${esc(kicker)}</p><h2>${esc(title)}</h2></div></div><div class="visual-card">${visual}</div></section>`;}
 function normalizedDemand(rows,metric){return rows.filter(r=>r.metric_type===metric).map(r=>({label:r.job_role,value:metric==='net-growth-percent'?r.demand_value:r.headcount_needed/1e6,unit:metric==='net-growth-percent'?r.demand_unit:'million jobs',series:r.industry,period:`${r.year_start}–${r.year_end}`,source_page:r.source_page,note:r.note}));}
 
@@ -46,7 +54,14 @@ function roleTable(demand,requirements){
   const skillMap=requirements.reduce((map,r)=>{(map[r.industry]??=[]).push(r);return map;},{});
   return `<div class="table-scroll"><table><thead><tr><th>Industry</th><th>Top growing role</th><th>Net growth</th><th>All skill signals in SQL</th><th>Source</th></tr></thead><tbody>${roles.map(r=>{const skills=(skillMap[r.industry]||[]).sort((a,b)=>b.importance_level-a.importance_level);return `<tr><td>${esc(r.industry)}</td><td>${esc(r.job_role)}</td><td><strong>${fmt.format(r.demand_value)}%</strong></td><td>${skills.length?skills.map(s=>`${esc(s.skill)} (${fmt.format(s.importance_level)}%) ${sourceBadge(s.source_page)}`).join('<br>'):'—'}</td><td>${sourceBadge(r.source_page,r.note)}</td></tr>`;}).join('')}</tbody></table></div>`;
 }
-function metricSection(key,rows,title,index){const visual=key==='neet_groups'?donut(rows):key==='neet_demographics'?grouped(rows):bars(rows);return section(`section-${key}`,'SQL METRICS · PAGE CITED',title,visual,index);}
+const CHARTS={
+  hc_stunting_trend:['ภาวะเตี้ยแคระแกร็น เด็ก 0–5 ปี','line'],hc_wasting_trend:['ภาวะผอมแห้ง เด็ก 0–5 ปี','line'],hc_overweight_trend:['ภาวะน้ำหนักเกิน เด็ก 0–5 ปี','line'],
+  hc_ecdi:['เด็กที่บรรลุเกณฑ์ ECDI 2030 — 6 มิติ','grouped'],hc_foundational_skills:['ทักษะพื้นฐานแยกตามชั้นเรียน','grouped'],hc_reading_equity:['ทักษะอ่านพื้นฐานตามปัจจัยความเหลื่อมล้ำ','bar'],hc_numeracy_equity:['ทักษะคำนวณพื้นฐานตามปัจจัยความเหลื่อมล้ำ','bar'],
+  hc_pisa_country:['คะแนน PISA ไทยเทียบ OECD ปี 2561 และ 2565','grouped'],hc_pisa_school_quartile:['PISA 2022 ตามควอร์ไทล์ฐานะโรงเรียน','grouped'],hc_upper_secondary_completion:['ผู้มีการศึกษา ม.ปลายขึ้นไป อายุ 25–34 ปี','bar'],human_capital_training:['การเข้าถึงและความต้องการฝึกอบรม','grouped'],
+  stem_pisa_2018:['PISA 2018 คณิตศาสตร์และวิทยาศาสตร์: ไทยเทียบ OECD','grouped'],stem_school_leavers:['ผู้สำเร็จ ม.3 และ ม.6','line'],stem_vocational_students:['นักเรียนอาชีวศึกษาแยกประเภทวิชาและวุฒิ','grouped'],stem_vocational_budget:['งบประมาณอาชีวศึกษาย้อนหลัง 5 ปี','line'],stem_career_alignment:['ผู้จบ STEM ที่ทำงานในอาชีพ STEM','bar'],
+  thai_job_postings:['ตำแหน่งงานออนไลน์ที่เปิดรับสูงสุด','bar'],neet_press_release:['ตัวเลขสำคัญจากข่าว UNICEF','stat']
+};
+function metricSection(key,rows,title,index,type){const kind=type||CHARTS[key]?.[1]||(key==='neet_groups'?'donut':key==='neet_demographics'?'grouped':'bar');const visual=kind==='donut'?donut(rows):kind==='grouped'?grouped(rows):kind==='line'?lineChart(rows):kind==='stat'?statCards(rows):bars(rows);return section(`section-${key}`,'SQL METRICS · PAGE CITED',title,visual,index);}
 
 function renderSections(data){
   const charts=data.charts;let html='',i=1;
@@ -55,16 +70,15 @@ function renderSections(data){
     html+=section('section-transition','GLOBAL JOB TRANSITION · MILLION JOBS','งานที่เกิดขึ้น งานที่หายไป และการเปลี่ยนแปลงสุทธิ',bars(normalizedDemand(data.job_demand,'creation').concat(normalizedDemand(data.job_demand,'displacement'),normalizedDemand(data.job_demand,'net-growth'))),i++);
     html+=metricSection('macrotrends',(charts.macrotrends||[]).filter(r=>r.series!=='Technology'),'Macrotrends ที่เปลี่ยนธุรกิจ',i++);
     html+=metricSection('technology',(charts.macrotrends||[]).filter(r=>r.series==='Technology'),'Technology adoption ถึงปี 2030',i++);
-    html+=section('section-industries','22 INDUSTRY PROFILES','ภาพรวมงานรายอุตสาหกรรม',industryCards(data.job_demand),i++);
+    html+=section('section-industries',`${data.job_demand.filter(r=>r.metric_type==='net-growth-percent').length} INDUSTRY PROFILES`,'ภาพรวมงานรายอุตสาหกรรม',industryCards(data.job_demand),i++);
     html+=section('section-roles','ROLE + SKILL EVIDENCE','Top roles และสัญญาณทักษะรายอุตสาหกรรม',roleTable(data.job_demand,data.skill_requirements),i++);
   }else if(documentId===1){
     html+=metricSection('neet_provinces',charts.neet_provinces||[],'อัตรา NEET ตามจังหวัดและภูมิภาค',i++);
     html+=metricSection('neet_groups',charts.neet_groups||[],'เยาวชน NEET 4 กลุ่ม',i++);
     html+=metricSection('neet_demographics',charts.neet_demographics||[],'NEET ตามเพศ อายุ และการศึกษา',i++);
   }else{
-    const labels={human_capital_training:'การเข้าถึงและความต้องการฝึกอบรม',stem_career_alignment:'ผู้จบ STEM ที่ทำงานในอาชีพ STEM',thai_job_postings:'ตำแหน่งงานออนไลน์ที่เปิดรับสูงสุด',neet_press_release:'ตัวเลขสำคัญจากข่าว UNICEF'};
-    html+=`<aside class="quality-note"><strong>ข้อมูลเชิงปริมาณมีจำกัด</strong><p>เอกสารนี้เป็นเชิงคุณภาพเป็นหลัก หน้านี้จึงแสดงเฉพาะตัวเลขที่ถอดเป็นข้อมูลโครงสร้างใน SQL และมีหน้าหลักฐานอ้างอิง โดยไม่สร้างกราฟหรือค่าทดแทนข้อมูลที่ไม่มี</p></aside>`;
-    Object.entries(charts).forEach(([key,rows])=>{if(rows.length)html+=metricSection(key,rows,labels[key]||key.replaceAll('_',' '),i++);});
+    if(documentId===4||documentId===6)html+=`<aside class="quality-note"><strong>แสดงเท่าที่หลักฐานรองรับ</strong><p>เนื้อหาส่วนใหญ่เป็นเชิงคุณภาพ หน้านี้จึงไม่สร้างกราฟจากตารางนิยาม โครงสร้างหลักสูตร หรือค่าที่จับคู่กับป้ายกำกับไม่ได้อย่างแน่นอน</p></aside>`;
+    Object.entries(charts).forEach(([key,rows])=>{if(rows.length)html+=metricSection(key,rows,CHARTS[key]?.[0]||key.replaceAll('_',' '),i++,CHARTS[key]?.[1]);});
     if(!Object.values(charts).flat().length)html+=`<section class="empty-state"><h2>ยังไม่มีตัวเลขที่ผ่านการถอดเป็น SQL</h2><p>เนื้อหาเอกสารยังค้นหาได้ แต่จะไม่ถูกนำมาสร้าง visualization จนกว่าจะมีค่าพร้อมแหล่งอ้างอิง</p></section>`;
   }
   document.getElementById('reportSections').innerHTML=html;
