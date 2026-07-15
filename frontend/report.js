@@ -1,6 +1,7 @@
 const fmt = new Intl.NumberFormat('th-TH', {maximumFractionDigits: 2});
 const esc = value => String(value ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const documentId = Number(location.pathname.match(/\/(?:documents|reports)\/(\d+)/)?.[1]);
+let sourceDocument = {document_type:'pdf', source_uri:''};
 
 const META = {
   1:{code:'UNICEF · NEET THAILAND',summary:'สถานการณ์ ความเหลื่อมล้ำ และความพร้อมของเยาวชนที่ไม่ได้เรียน ทำงาน หรือฝึกอบรม'},
@@ -12,7 +13,11 @@ const META = {
 };
 
 async function api(path){const response=await fetch(path);if(!response.ok)throw new Error(await response.text());return response.json();}
-function pageHref(page){return `/api/documents/${documentId}/pages/${page || 1}`;}
+function pageHref(page){
+  if(sourceDocument.document_type==='pdf')return `/api/documents/${documentId}/source#page=${encodeURIComponent(page||1)}`;
+  if(/^https?:\/\//i.test(sourceDocument.source_uri||''))return sourceDocument.source_uri;
+  return `/api/documents/${documentId}/pages/${page||1}`;
+}
 function sourceBadge(page,note=''){return `<div class="evidence"><a href="${pageHref(page)}" target="_blank" rel="noopener">หลักฐาน · หน้า ${fmt.format(page)} ↗</a>${note?`<span title="${esc(note)}">หมายเหตุ ⓘ</span>`:''}</div>`;}
 function valueText(row){const unit=row.unit||row.demand_unit||'';if(unit.startsWith('%'))return `${fmt.format(row.value)}%`;if(unit==='positions')return `${fmt.format(row.value)} ตำแหน่ง`;return `${fmt.format(row.value)} ${esc(unit)}`;}
 
@@ -75,8 +80,8 @@ function setupToc(){
 }
 
 function render(data){
-  const doc=data.document,meta=META[doc.id]||{code:doc.source,summary:doc.topic};document.title=`${doc.title} · Future Ready Talent`;
-  const source=doc.document_type==='pdf'?`/api/documents/${doc.id}/source`:`/api/documents/${doc.id}/pages/1`;
+  const doc=data.document,meta=META[doc.id]||{code:doc.source,summary:doc.topic};sourceDocument=doc;document.title=`${doc.title} · Future Ready Talent`;
+  const source=doc.document_type==='pdf'?`/api/documents/${doc.id}/source`:(/^https?:\/\//i.test(doc.source_uri||'')?doc.source_uri:`/api/documents/${doc.id}/pages/1`);
   document.getElementById('reportHero').className='report-hero';document.getElementById('reportHero').innerHTML=`<a class="back" href="/">← คลังเอกสาร</a><div><p class="hero-code">${esc(meta.code)}</p><h1>${esc(doc.title)}</h1><p class="hero-summary">${esc(meta.summary)}</p><div class="hero-meta"><span>${fmt.format(doc.page_count)} หน้า</span><span>${fmt.format(Object.values(data.charts).flat().length)} metrics</span><span>${fmt.format(data.job_demand.length)} job records</span></div></div><a class="open-source" href="${source}" target="_blank" rel="noopener">เปิดต้นฉบับ ↗</a>`;
   renderSections(data);setupToc();
 }

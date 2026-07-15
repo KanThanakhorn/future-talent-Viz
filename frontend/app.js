@@ -18,6 +18,8 @@ function valueText(row) {
 }
 
 function evidenceHref(doc, page) {
+  if (doc.document_type === 'pdf') return `/api/documents/${doc.id}/source#page=${encodeURIComponent(page || 1)}`;
+  if (/^https?:\/\//i.test(doc.source_uri || '')) return doc.source_uri;
   return `/api/documents/${doc.id}/pages/${page || 1}`;
 }
 

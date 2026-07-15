@@ -2,8 +2,8 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from fastapi import FastAPI, HTTPException, Query
-from fastapi.responses import FileResponse
+from fastapi import FastAPI, HTTPException, Query, Request
+from fastapi.responses import FileResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field
 
@@ -245,17 +245,23 @@ def chat(body: ChatRequest) -> dict:
     return {"answer": response, "mode": model, "citations": citations}
 
 
-@app.get("/api/documents/{document_id}/pages/{page_number}")
-def document_page(document_id: int, page_number: int) -> dict:
+@app.get("/api/documents/{document_id}/pages/{page_number}", response_model=None)
+def document_page(document_id: int, page_number: int, request: Request) -> dict | RedirectResponse:
     with connect() as conn:
         row = conn.execute(
-            """SELECT p.page_number,p.content,p.extraction_method,p.needs_review,d.title,d.source_uri
+            """SELECT p.page_number,p.content,p.extraction_method,p.needs_review,d.title,d.source_uri,
+                      d.document_type
                FROM document_pages p JOIN documents d ON d.id=p.document_id
                WHERE p.document_id=? AND p.page_number=?""",
             (document_id, page_number),
         ).fetchone()
     if not row:
         raise HTTPException(404, "Page not found")
+    if "text/html" in request.headers.get("accept", ""):
+        if row["document_type"] == "pdf":
+            return RedirectResponse(f"/api/documents/{document_id}/source#page={page_number}", status_code=302)
+        if str(row["source_uri"]).startswith(("http://", "https://")):
+            return RedirectResponse(row["source_uri"], status_code=302)
     return dict(row)
 
 
