@@ -70,6 +70,12 @@ HUMAN_CAPITAL_METRICS = [
     ("human_capital_training", "ต้องการการฝึกอบรม", "กำลังแรงงาน", 11.65, "% workforce", "2021 Q1", "Thailand", 4, 38, None),
 ]
 
+UNICEF_PRESS_METRICS = [
+    ("neet_press_release", "Motivation", "Youth NEET who lack motivation to develop skills or work", 68, "% youth NEET", "2023", "Thailand", 1, 1, "UNICEF press release, 22 March 2023"),
+    ("neet_press_release", "Scale", "Youth aged 15–24 who are NEET", 15, "% youth", "2023", "Thailand", 2, 1, "Approximately 1.4 million young people"),
+    ("neet_press_release", "Gender", "Youth NEET who are female", 70, "% youth NEET", "2023", "Thailand", 3, 1, "Reported as about 70 per cent"),
+]
+
 
 def seed_analytics(conn: sqlite3.Connection) -> None:
     titles = (
@@ -93,6 +99,12 @@ def seed_analytics(conn: sqlite3.Connection) -> None:
         (titles[3], STEM_METRICS),
         (titles[4], HUMAN_CAPITAL_METRICS),
     ]
+    press = conn.execute(
+        "SELECT MIN(id) AS id,title FROM documents WHERE title LIKE 'Nearly 7 in 10%'"
+    ).fetchone()
+    if press and press["id"] is not None:
+        source_sets.append((press["title"], UNICEF_PRESS_METRICS))
+        sources[press["title"]] = int(press["id"])
     for title, metrics in source_sets:
         document_id = sources.get(title)
         if not document_id:

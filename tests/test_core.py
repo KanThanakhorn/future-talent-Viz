@@ -7,9 +7,15 @@ from app.analytics import seed_analytics
 from app.db import connect, init_db
 from app.ingest import ArticleParser, _is_url_reference, chunks_from_pages
 from app.retrieval import _fts_tokens, cosine, embed
+from app.main import report_page
 
 
 class CoreTests(unittest.TestCase):
+    def test_report_page_route_exists(self):
+        response = report_page(1)
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(Path(response.path).name, "report.html")
+
     def test_url_reference_detection_rejects_content(self):
         self.assertTrue(_is_url_reference("https://example.org/article\n"))
         self.assertFalse(_is_url_reference("https://example.org\narticle body"))

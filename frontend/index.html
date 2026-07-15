@@ -3,80 +3,27 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1">
-  <meta name="description" content="Future Ready Talent knowledge dashboard">
-  <title>Future Ready Talent</title>
+  <meta name="description" content="Future Ready Talent — หลักฐานเรื่องงาน ทักษะ และเยาวชนจาก 6 เอกสาร">
+  <title>Future Ready Talent · Document Library</title>
   <link rel="stylesheet" href="/assets/styles.css">
 </head>
 <body>
-  <aside class="sidebar">
-    <a class="brand" href="#top"><span class="mark">F</span><span>Future Ready<br><b>Talent</b></span></a>
-    <nav>
-      <a class="active" href="#overview">ภาพรวม</a>
-      <a href="#outlook">Global demand</a>
-      <a href="#readiness">Thai readiness</a>
-      <a href="#gap">Demand vs readiness</a>
-      <a href="#knowledge">คลังความรู้</a>
-      <a href="#ask">ถามเอกสาร</a>
-    </nav>
-    <div class="sidebar-note"><span class="pulse"></span><span id="systemStatus">กำลังเชื่อมต่อระบบ</span></div>
-  </aside>
-
-  <main id="top">
-    <header>
-      <div><p class="eyebrow">THAILAND TALENT INTELLIGENCE</p><h1>มองเห็นแรงงาน<br><em>แห่งอนาคต</em></h1></div>
-      <p class="intro">ข้อมูลตลาดแรงงาน ทักษะ และเยาวชนที่ตรวจสอบย้อนกลับไปยังรายงานต้นฉบับได้ทุกจุด</p>
-    </header>
-
-    <section id="overview" class="stats" aria-label="สถิติข้อมูล">
-      <article><span>เอกสาร</span><strong id="docCount">—</strong><small>แหล่งข้อมูลพร้อมค้นหา</small></article>
-      <article><span>หน้าที่ประมวลผล</span><strong id="pageCount">—</strong><small>text layer + web parsing</small></article>
-      <article><span>Knowledge chunks</span><strong id="chunkCount">—</strong><small>พร้อมใช้ใน RAG</small></article>
-      <article><span>รอตรวจ OCR</span><strong id="reviewCount">—</strong><small>ไม่เดาข้อมูลจากภาพ</small></article>
+  <header class="landing-hero">
+    <nav class="landing-nav"><a class="brand" href="/"><span class="mark">F</span><span>Future Ready <b>Talent</b></span></a><span id="systemStatus">กำลังโหลดหลักฐาน…</span></nav>
+    <div class="hero-copy">
+      <p class="eyebrow">THAILAND TALENT INTELLIGENCE · 6 SOURCES</p>
+      <h1>ข้อมูลอนาคตแรงงาน<br><em>อ่านแบบแยกเอกสาร</em></h1>
+      <p>เลือกสำรวจรายงานฉบับเต็ม ทุกสถิติด้านล่าง query จาก SQL โดยตรงและย้อนกลับไปยังหน้าหลักฐานต้นฉบับได้</p>
+    </div>
+  </header>
+  <main>
+    <section class="library-head">
+      <div><p class="eyebrow">DOCUMENT LIBRARY</p><h2>6 มุมมองต่ออนาคตคนไทย</h2></div>
+      <p>แต่ละหน้ารวม visualization ของข้อมูลเชิงโครงสร้างที่มีอยู่จริงในเอกสารนั้น โดยไม่เติมค่าที่ฐานข้อมูลไม่มี</p>
     </section>
-
-    <section id="outlook" class="panel">
-      <div class="section-head"><div><p class="eyebrow">GLOBAL DEMAND · WEF 2025</p><h2>โลกกำลังต้องการ<br><em>อะไร</em></h2></div><p>ตัวเลขทุกจุด query จาก SQL โดยตรง และแยกออกจาก RAG</p></div>
-      <div class="chart-grid">
-        <article class="chart-card wide"><div class="chart-title"><span>01</span><div><h3>Fastest-growing vs declining skills</h3><p>Net change in employer expectations, 2025–2030</p></div></div><div id="skillChangeChart" class="bar-chart"></div></article>
-        <article class="chart-card"><div class="chart-title"><span>02</span><div><h3>Jobs created vs displaced</h3><p>Structural labour-market transformation</p></div></div><canvas id="demandChart" width="720" height="390" aria-label="กราฟจำนวนงานที่สร้างและหายไป"></canvas><div id="demandLegend" class="legend"></div><p id="chartSource" class="source"></p></article>
-        <article class="chart-card"><div class="chart-title"><span>03</span><div><h3>Macrotrends transforming business</h3><p>Share of surveyed employers</p></div></div><div id="macroTrendChart" class="bar-chart compact"></div></article>
-      </div>
-    </section>
-
-    <section id="readiness" class="panel readiness-panel">
-      <div class="section-head"><div><p class="eyebrow">LOCAL READINESS · THAILAND</p><h2>เยาวชนไทย<br><em>พร้อมแค่ไหน</em></h2></div><p>ข้อมูล UNICEF/NSO แสดงข้อจำกัดเชิงพื้นที่ แรงจูงใจ และพื้นฐานการศึกษา</p></div>
-      <div class="chart-grid">
-        <article class="chart-card"><div class="chart-title"><span>04</span><div><h3>จังหวัดที่มี NEET rate สูง</h3><p>Selected highest-rate provinces by region, 2020</p></div></div><div id="provinceChart" class="bar-chart compact"></div></article>
-        <article class="chart-card"><div class="chart-title"><span>05</span><div><h3>เยาวชน NEET 4 กลุ่ม</h3><p>ความต้องการพัฒนาทักษะ × ความพร้อมทำงาน</p></div></div><div id="groupChart" class="donut-layout"></div></article>
-        <article class="chart-card wide"><div class="chart-title"><span>06</span><div><h3>Gender · Age · Education</h3><p>อัตรา NEET ตามลักษณะประชากร</p></div></div><div id="demographicChart" class="demographic-grid"></div></article>
-      </div>
-      <div class="local-evidence-head"><div><p class="eyebrow">NEW LOCAL EVIDENCE · PDF</p><h2>ตลาดแรงงาน การศึกษา<br><em>และทุนมนุษย์ไทย</em></h2></div><p>สกัดจากรายงานฉบับเต็มทั้งสามไฟล์ พร้อมลิงก์กลับไปยังหน้า PDF ต้นฉบับ</p></div>
-      <div class="evidence-grid">
-        <article class="chart-card"><div class="chart-title"><span>07</span><div><h3>งานที่เปิดรับสูงสุด</h3><p>TDRI-JPA · ไตรมาส 1/2567 · 15 job boards</p></div></div><div id="thaiJobPostingsChart" class="bar-chart compact"></div></article>
-        <article class="chart-card"><div class="chart-title"><span>08</span><div><h3>เรียน STEM → ทำงาน STEM</h3><p>สัดส่วนผู้จบ STEM ที่ทำงานในอาชีพ STEM</p></div></div><div id="stemCareerChart" class="bar-chart compact"></div></article>
-        <article class="chart-card"><div class="chart-title"><span>09</span><div><h3>Training participation gap</h3><p>ได้รับการฝึกอบรม เทียบกับความต้องการฝึกอบรม</p></div></div><div id="humanCapitalTrainingChart" class="bar-chart compact"></div></article>
-      </div>
-    </section>
-
-    <section id="gap" class="gap-panel">
-      <div><p class="eyebrow light">DEMAND × READINESS</p><h2>ช่องว่างที่<br>ยังต้องวัด</h2></div>
-      <article id="gapChart" class="gap-chart"><div class="loading">กำลังโหลดหลักฐาน…</div></article>
-    </section>
-
-    <section id="knowledge" class="panel">
-      <div class="section-head"><div><p class="eyebrow">SOURCE LIBRARY</p><h2>คลังความรู้</h2></div><p>ทุกแหล่งผ่านการตรวจว่าเป็น PDF หรือ URL reference ก่อนนำเข้า</p></div>
-      <div id="documents" class="documents"><div class="loading">กำลังโหลดเอกสาร…</div></div>
-    </section>
-
-    <section id="ask" class="ask-panel">
-      <div class="ask-copy"><p class="eyebrow light">HYBRID RAG</p><h2>ถามจาก<br>หลักฐานจริง</h2><p>BM25 + multilingual vector รวมผลด้วย RRF แล้ว re-rank ก่อนตอบ พร้อมแสดงชนิดหลักฐานและเลขหน้าเสมอ</p></div>
-      <div class="chat">
-        <div id="messages" class="messages"><div class="message assistant">ลองถามว่า “ทักษะใดเติบโตเร็วที่สุด?” หรือ “สถานการณ์เยาวชน NEET ในไทยเป็นอย่างไร?”</div></div>
-        <form id="chatForm"><label class="sr-only" for="question">คำถาม</label><textarea id="question" rows="2" maxlength="1000" placeholder="ถามข้อมูลเกี่ยวกับงาน ทักษะ หรือเยาวชน…" required></textarea><button type="submit" aria-label="ส่งคำถาม">→</button></form>
-      </div>
-    </section>
-    <footer><span>Future Ready Talent Knowledge Platform</span><span>Traceable by design · 2026</span></footer>
+    <section id="documentCards" class="document-grid" aria-live="polite"><p class="loading">กำลังโหลดเอกสาร…</p></section>
   </main>
+  <footer><span>Future Ready Talent Knowledge Platform</span><span>Traceable by design · 2026</span></footer>
   <script src="/assets/app.js" defer></script>
 </body>
 </html>
