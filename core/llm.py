@@ -14,6 +14,12 @@ class OpenAIResponsesProvider:
     def __init__(self, config: LLMConfig) -> None:
         self.config = config
 
+    @staticmethod
+    def _supports_temperature(model: str) -> bool:
+        # GPT-5-family models currently reject the temperature field on the
+        # Responses API; sampling is controlled by the model/reasoning mode.
+        return not model.lower().startswith("gpt-5")
+
     def generate(
         self, prompt: str, *, model: str | None = None, reasoning_effort: str | None = None
     ) -> Generation:
@@ -23,8 +29,9 @@ class OpenAIResponsesProvider:
         payload = {
             "model": selected_model,
             "input": prompt,
-            "temperature": self.config.temperature,
         }
+        if self._supports_temperature(selected_model):
+            payload["temperature"] = self.config.temperature
         if reasoning_effort:
             payload["reasoning"] = {"effort": reasoning_effort}
         request = urllib.request.Request(

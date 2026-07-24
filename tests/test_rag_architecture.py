@@ -8,6 +8,7 @@ from pathlib import Path
 
 from core.application import AnswerService
 from core.llm import ExtractiveProvider
+from core.llm import OpenAIResponsesProvider
 from core.models import Route
 from core.router import KeywordQuestionRouter
 from mcp.client import InProcessMCPClient
@@ -20,6 +21,10 @@ from rag.vector_store import SQLiteVectorStore
 
 
 class ArchitectureTests(unittest.TestCase):
+    def test_gpt5_responses_payload_omits_temperature(self):
+        self.assertFalse(OpenAIResponsesProvider._supports_temperature("gpt-5.3-chat-latest"))
+        self.assertTrue(OpenAIResponsesProvider._supports_temperature("gpt-4o"))
+
     def test_chunk_metadata_and_overlap(self):
         chunks = WordChunker(5, 2).split("doc-1", [(7, "Heading\none two three four five six seven")], "a.pdf")
         self.assertGreaterEqual(len(chunks), 2)
