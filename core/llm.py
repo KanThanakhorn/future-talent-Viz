@@ -66,6 +66,48 @@ class OpenAIResponsesProvider:
         return Generation(text.strip(), selected_model, usage)
 
 
+class OllamaProvider:
+    """Local Ollama provider using its native /api/chat endpoint."""
+
+    def __init__(self, config: LLMConfig) -> None:
+        self.config = config
+
+    def generate(
+        self, prompt: str, *, model: str | None = None, reasoning_effort: str | None = None
+    ) -> Generation:
+        selected_model = model or self.config.ollama_model
+        payload = {
+            "model": selected_model,
+            "messages": [{"role": "user", "content": prompt}],
+            "stream": False,
+            "options": {"temperature": self.config.temperature},
+        }
+        request = urllib.request.Request(
+            self.config.base_url.rstrip("/") + "/api/chat",
+            data=json.dumps(payload).encode("utf-8"),
+            headers={"Content-Type": "application/json"},
+            method="POST",
+        )
+        try:
+            with urllib.request.urlopen(request, timeout=self.config.timeout_seconds) as response:
+                result = json.loads(response.read())
+        except urllib.error.HTTPError as exc:
+            detail = exc.read().decode("utf-8", errors="replace")
+            raise RuntimeError(f"Ollama request failed ({exc.code}): {detail[:500]}") from exc
+        except urllib.error.URLError as exc:
+            raise RuntimeError(
+                "Cannot connect to Ollama. Start it with `ollama serve` and pull the configured model."
+            ) from exc
+        message = result.get("message", {})
+        text = str(message.get("content", "")).strip()
+        usage = Usage(
+            input_tokens=int(result.get("prompt_eval_count", 0)),
+            output_tokens=int(result.get("eval_count", 0)),
+            total_tokens=int(result.get("prompt_eval_count", 0)) + int(result.get("eval_count", 0)),
+        )
+        return Generation(text, selected_model, usage)
+
+
 class ExtractiveProvider:
     """Offline provider that preserves the grounded-answer contract."""
 
@@ -83,8 +125,12 @@ class ExtractiveProvider:
 
 
 def create_llm(config: LLMConfig):
-    if config.provider == "extractive" or not config.api_key:
+    if config.provider == "extractive":
         return ExtractiveProvider()
     if config.provider == "openai":
+        if not config.api_key:
+            return ExtractiveProvider()
         return OpenAIResponsesProvider(config)
+    if config.provider == "ollama":
+        return OllamaProvider(config)
     raise ValueError(f"Unsupported LLM provider: {config.provider}")

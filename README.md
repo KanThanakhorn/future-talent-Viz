@@ -41,8 +41,25 @@ PDF evidence + SQL evidence -> LLMProvider -> grounded answer
 
 Protocol/interface definitions อยู่ใน `core/interfaces.py`; implementations ปัจจุบันคือ FastEmbed
 (fallback เป็น deterministic local hash), local SQLite vector store, OpenAI Responses adapter
-(fallback extractive), และ read-only SQLite MCP tools การเปลี่ยน LLM, embeddings, vector database
+(Ollama local adapter และ fallback extractive), และ read-only SQLite MCP tools การเปลี่ยน LLM, embeddings, vector database
 หรือ SQL backend ทำได้ด้วย adapter ใหม่โดยไม่แก้ business logic ใน `AnswerService`
+
+ทดสอบด้วย Ollama โดยไม่ต้องลบ OpenAI config:
+
+```bash
+ollama serve
+ollama pull llama3.1:8b
+```
+
+แล้วตั้งเฉพาะใน `.env`:
+
+```env
+FRT_LLM_PROVIDER=ollama
+OLLAMA_MODEL=llama3.1:8b
+FRT_LLM_BASE_URL=http://localhost:11434
+```
+
+กลับไปใช้ OpenAI ได้ทันทีด้วย `FRT_LLM_PROVIDER=openai` และ `OPENAI_MODEL=...`
 
 MCP server แบบ stdio:
 

@@ -7,7 +7,7 @@ import unittest
 from pathlib import Path
 
 from core.application import AnswerService
-from core.llm import ExtractiveProvider
+from core.llm import ExtractiveProvider, OllamaProvider, create_llm
 from core.llm import OpenAIResponsesProvider
 from core.models import Route
 from core.router import KeywordQuestionRouter
@@ -21,6 +21,12 @@ from rag.vector_store import SQLiteVectorStore
 
 
 class ArchitectureTests(unittest.TestCase):
+    def test_ollama_provider_keeps_openai_provider_separate(self):
+        from core.config import LLMConfig
+
+        config = LLMConfig("ollama", "unused-openai-model", "test-model", "http://localhost:11434", 0, 1, "")
+        self.assertIsInstance(create_llm(config), OllamaProvider)
+
     def test_gpt5_responses_payload_omits_temperature(self):
         self.assertFalse(OpenAIResponsesProvider._supports_temperature("gpt-5.3-chat-latest"))
         self.assertTrue(OpenAIResponsesProvider._supports_temperature("gpt-4o"))

@@ -12,6 +12,8 @@
   "llm": {
     "provider": "openai",
     "model": "gpt-5-mini",
+    "ollama_model": "llama3.1:8b",
+    "base_url": "http://localhost:11434",
     "temperature": 0.0,
     "timeout_seconds": 20
   },

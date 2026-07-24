@@ -40,6 +40,8 @@ class RagConfig:
 class LLMConfig:
     provider: str
     model: str
+    ollama_model: str
+    base_url: str
     temperature: float
     timeout_seconds: float
     api_key: str
@@ -91,6 +93,8 @@ def load_config(path: str | Path | None = None) -> AppConfig:
         llm=LLMConfig(
             provider=os.getenv("FRT_LLM_PROVIDER", llm["provider"]),
             model=os.getenv("OPENAI_MODEL", llm["model"]),
+            ollama_model=os.getenv("OLLAMA_MODEL", llm.get("ollama_model", "llama3.1:8b")),
+            base_url=os.getenv("FRT_LLM_BASE_URL", llm.get("base_url", "http://localhost:11434")),
             temperature=float(os.getenv("FRT_TEMPERATURE", llm["temperature"])),
             timeout_seconds=float(os.getenv("FRT_LLM_TIMEOUT", llm["timeout_seconds"])),
             api_key=os.getenv("OPENAI_API_KEY", ""),
