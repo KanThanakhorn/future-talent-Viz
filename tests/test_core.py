@@ -61,6 +61,8 @@ class CoreTests(unittest.TestCase):
                 self.assertIn("source_type", columns)
                 requirement_columns = {row[1] for row in conn.execute("PRAGMA table_info(skill_requirements)")}
                 self.assertTrue({"source_document_id", "source_page", "evidence_scope"} <= requirement_columns)
+                note_columns = {row[1] for row in conn.execute("PRAGMA table_info(editorial_notes)")}
+                self.assertTrue({"section_key", "note_type", "body", "source_document_id", "source_page"} <= note_columns)
                 for source_uri, title in [
                     ("file:///wef.pdf", "Future of Jobs Report 2025"),
                     ("file:///neet.pdf", "In-depth Research on Youth NEET in Thailand"),

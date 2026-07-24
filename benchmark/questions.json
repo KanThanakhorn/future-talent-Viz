@@ -1,0 +1,20 @@
+[
+  {
+    "id": "jobs-001",
+    "question": "Which skills are expected to grow fastest?",
+    "expected_keywords": ["AI", "data"],
+    "expected_sources": ["WEF_Future_of_Jobs_Report_2025.pdf"]
+  },
+  {
+    "id": "neet-001",
+    "question": "อธิบายปัจจัยที่ทำให้เยาวชนไทยเป็น NEET",
+    "expected_keywords": ["NEET"],
+    "expected_sources": ["In-depth research on youth NEET in Thailand.pdf"]
+  },
+  {
+    "id": "stem-001",
+    "question": "สถิติการทำงานของผู้จบ STEM เป็นอย่างไร",
+    "expected_keywords": ["STEM"],
+    "expected_sources": ["2024_11_STD_660202.pdf"]
+  }
+]

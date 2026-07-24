@@ -10,6 +10,11 @@ dependencies = [
   "fastembed>=0.8,<0.9",
 ]
 
+[project.scripts]
+future-talent = "cli:main"
+future-talent-mcp = "mcp.server:main"
+future-talent-benchmark = "benchmark.benchmark:main"
+
 [project.optional-dependencies]
 dev = ["pytest>=8,<9", "httpx>=0.28,<1"]
 

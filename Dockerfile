@@ -50,8 +50,16 @@ COPY --from=builder /opt/venv /opt/venv
 WORKDIR /app
 COPY --chown=app:app app ./app
 COPY --chown=app:app frontend ./frontend
+COPY --chown=app:app core ./core
+COPY --chown=app:app rag ./rag
+COPY --chown=app:app mcp ./mcp
+COPY --chown=app:app database ./database
+COPY --chown=app:app benchmark ./benchmark
+COPY --chown=app:app web ./web
+COPY --chown=app:app config ./config
+COPY --chown=app:app cli.py ./cli.py
 
-RUN python -m compileall -q app
+RUN python -m compileall -q app core rag mcp database benchmark web cli.py
 
 USER app
 

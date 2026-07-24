@@ -2,6 +2,7 @@ const fmt = new Intl.NumberFormat('th-TH', {maximumFractionDigits: 2});
 const esc = value => String(value ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const documentId = Number(location.pathname.match(/\/(?:documents|reports)\/(\d+)/)?.[1]);
 let sourceDocument = {document_type:'pdf', source_uri:''};
+let editorialBySection = {};
 
 const META = {
   1:{code:'UNICEF · NEET THAILAND',summary:'สถานการณ์ ความเหลื่อมล้ำ และความพร้อมของเยาวชนที่ไม่ได้เรียน ทำงาน หรือฝึกอบรม'},
@@ -42,7 +43,8 @@ function lineChart(rows){
   return `<div class="line-chart"><svg viewBox="0 0 100 100" preserveAspectRatio="none" aria-label="trend chart">${paths}</svg><div class="line-labels">${labels}</div><div class="line-legend">${Object.keys(groups).map((name,i)=>`<span><i style="background:${colors[i%colors.length]}"></i>${esc(name)}</span>`).join('')}</div>${sourceBadge(rows[0]?.source_page,rows[0]?.note)}</div>`;
 }
 function statCards(rows){return `<div class="stat-grid">${rows.map(r=>`<article><strong>${valueText(r)}</strong><p>${esc(r.label)}</p>${sourceBadge(r.source_page,r.note)}</article>`).join('')}</div>`;}
-function section(id,kicker,title,visual,index){return `<section class="story-section" id="${id}"><div class="story-head"><span>${String(index).padStart(2,'0')}</span><div><p>${esc(kicker)}</p><h2>${esc(title)}</h2></div></div><div class="visual-card">${visual}</div></section>`;}
+function editorialCards(id){const notes=editorialBySection[id]||[];if(!notes.length)return '';const labels={context:'บริบท',finding:'ข้อค้นพบ',caution:'ข้อควรระวัง',definition:'นิยาม'};return `<div class="editorial-grid">${notes.map(note=>`<article class="editorial-${esc(note.note_type)}"><small>${esc(labels[note.note_type]||note.note_type)}</small><h3>${esc(note.title)}</h3><p>${esc(note.body)}</p>${sourceBadge(note.source_page)}</article>`).join('')}</div>`;}
+function section(id,kicker,title,visual,index){return `<section class="story-section" id="${id}"><div class="story-head"><span>${String(index).padStart(2,'0')}</span><div><p>${esc(kicker)}</p><h2>${esc(title)}</h2></div></div>${editorialCards(id)}<div class="visual-card">${visual}</div></section>`;}
 function normalizedDemand(rows,metric){return rows.filter(r=>r.metric_type===metric).map(r=>({label:r.job_role,value:metric==='net-growth-percent'?r.demand_value:r.headcount_needed/1e6,unit:metric==='net-growth-percent'?r.demand_unit:'million jobs',series:r.industry,period:`${r.year_start}–${r.year_end}`,source_page:r.source_page,note:r.note}));}
 
 function industryCards(rows){
@@ -64,7 +66,7 @@ const CHARTS={
 function metricSection(key,rows,title,index,type){const kind=type||CHARTS[key]?.[1]||(key==='neet_groups'?'donut':key==='neet_demographics'?'grouped':'bar');const visual=kind==='donut'?donut(rows):kind==='grouped'?grouped(rows):kind==='line'?lineChart(rows):kind==='stat'?statCards(rows):bars(rows);return section(`section-${key}`,'SQL METRICS · PAGE CITED',title,visual,index);}
 
 function renderSections(data){
-  const charts=data.charts;let html='',i=1;
+  const charts=data.charts;let html='',i=1;editorialBySection=(data.editorial_notes||[]).reduce((all,n)=>((all[n.section_key]??=[]).push(n),all),{});
   if(documentId===2){
     html+=metricSection('skill_change',charts.skill_change||[],'ทักษะที่กำลังเติบโตและลดลง',i++);
     html+=section('section-transition','GLOBAL JOB TRANSITION · MILLION JOBS','งานที่เกิดขึ้น งานที่หายไป และการเปลี่ยนแปลงสุทธิ',bars(normalizedDemand(data.job_demand,'creation').concat(normalizedDemand(data.job_demand,'displacement'),normalizedDemand(data.job_demand,'net-growth'))),i++);

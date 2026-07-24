@@ -2,6 +2,73 @@
 
 แพลตฟอร์มข้อมูลแรงงานที่นำ PDF และ URL reference เข้าแบบ idempotent, เก็บข้อมูลที่ตรวจสอบย้อนกลับได้ใน SQL, ทำ hybrid retrieval และแสดงเรื่องราว demand vs readiness ผ่าน dashboard/chat
 
+## RAG + MCP CLI (primary interface)
+
+CLI เป็น entry point หลักของ AI backend ส่วน FastAPI และ frontend เดิมยังทำงานเหมือนเดิมและเป็น optional interface
+
+```bash
+cp .env.example .env
+
+# สร้าง optional competition tables ใน SQLite
+python3 cli.py seed-db
+
+# โหลด PDF จาก path ที่ config ไว้, chunk, embed และ index
+python3 cli.py index
+
+# interactive
+python3 cli.py
+
+# one-shot / machine-readable
+python3 cli.py ask "Who pays for the platform?"
+python3 cli.py ask "Who pays for the platform?" --json
+```
+
+ทุกคำตอบถูกบังคับให้มี retrieved PDF evidence ก่อนเสมอ และ output แสดง source filename, page,
+chunk IDs และ execution time หาก router พบคำถามเชิง structured data ระบบจะเรียก read-only SQL tool
+ผ่าน MCP boundary แล้วส่งทั้ง PDF chunks และ SQL rows ให้ LLM ก่อนสังเคราะห์คำตอบ
+
+ค่าทั้งหมดอยู่ใน [`config/settings.json`](config/settings.json) และ override ด้วย environment variables
+ใน [`.env.example`](.env.example) ได้ ไม่มี API key หรือ PDF path ฝังใน source code
+
+### Components and swap points
+
+```text
+cli.py -> QuestionRouter -> Retriever -> EmbeddingProvider -> VectorStore
+                         \-> MCP Client -> MCP SQL Server -> SQL backend
+PDF -> PdfTextLoader -> Chunker -> Indexer -----------------> VectorStore
+PDF evidence + SQL evidence -> LLMProvider -> grounded answer
+```
+
+Protocol/interface definitions อยู่ใน `core/interfaces.py`; implementations ปัจจุบันคือ FastEmbed
+(fallback เป็น deterministic local hash), local SQLite vector store, OpenAI Responses adapter
+(fallback extractive), และ read-only SQLite MCP tools การเปลี่ยน LLM, embeddings, vector database
+หรือ SQL backend ทำได้ด้วย adapter ใหม่โดยไม่แก้ business logic ใน `AnswerService`
+
+MCP server แบบ stdio:
+
+```bash
+python3 -m mcp.server
+```
+
+รองรับ `initialize`, `ping`, `tools/list`, `tools/call` และ tools:
+`search_people`, `search_budget`, `search_company`, `search_project`,
+`execute_readonly_sql` โดย SQL จำกัดเฉพาะ statement เดียวแบบ `SELECT`/`WITH`,
+เปิด database ด้วย `mode=ro` และใช้ SQLite authorizer ปฏิเสธ write operation
+
+### Benchmark
+
+แก้ question set ที่ `benchmark/questions.json` และ model mapping ที่
+`benchmark/models.json` แล้วรัน:
+
+```bash
+python3 -m benchmark.benchmark
+```
+
+ระบบสร้าง `benchmark/results.md` และ `benchmark/results.json` โดยวัด latency,
+expected-keyword accuracy, จำนวน retrieved chunks, citation quality,
+numeric hallucination rate และ token usage ชื่อ/ID โมเดลแยก config ไว้เพื่อรองรับ
+model IDs ที่บัญชี competition เปิดให้ใช้
+
 ## เริ่มใช้งาน
 
 ต้องมี Python 3.11+, `pdftotext` และ `pdftoppm` (แพ็กเกจ poppler-utils)

@@ -134,6 +134,18 @@ CREATE TABLE IF NOT EXISTS analytics_metrics (
     UNIQUE(chart_key, series, label, period, source_document_id)
 );
 
+CREATE TABLE IF NOT EXISTS editorial_notes (
+    id INTEGER PRIMARY KEY,
+    section_key TEXT NOT NULL,
+    note_type TEXT NOT NULL CHECK (note_type IN ('context', 'finding', 'caution', 'definition')),
+    title TEXT NOT NULL,
+    body TEXT NOT NULL,
+    sort_order INTEGER NOT NULL DEFAULT 0,
+    source_document_id INTEGER NOT NULL REFERENCES documents(id) ON DELETE CASCADE,
+    source_page INTEGER NOT NULL,
+    UNIQUE(section_key, note_type, title, source_document_id)
+);
+
 CREATE VIRTUAL TABLE IF NOT EXISTS chunk_fts USING fts5(
     content,
     content='chunks',
@@ -156,5 +168,6 @@ CREATE INDEX IF NOT EXISTS idx_pages_document ON document_pages(document_id);
 CREATE INDEX IF NOT EXISTS idx_chunks_document ON chunks(document_id);
 CREATE INDEX IF NOT EXISTS idx_embeddings_model ON chunk_embeddings_v2(model);
 CREATE INDEX IF NOT EXISTS idx_analytics_chart ON analytics_metrics(chart_key, sort_order);
+CREATE INDEX IF NOT EXISTS idx_editorial_section ON editorial_notes(source_document_id, section_key, sort_order);
 CREATE INDEX IF NOT EXISTS idx_job_demand_year ON job_demand(year_start, year_end);
 CREATE UNIQUE INDEX IF NOT EXISTS uq_documents_title_source ON documents(title, source);

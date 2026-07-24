@@ -22,6 +22,11 @@ class ChatRequest(BaseModel):
     limit: int = Field(default=6, ge=1, le=12)
 
 
+class GroundedChatRequest(BaseModel):
+    question: str = Field(min_length=2, max_length=1000)
+    top_k: int = Field(default=6, ge=1, le=20)
+
+
 @app.on_event("startup")
 def startup() -> None:
     init_db()
@@ -175,6 +180,12 @@ def document_full_data(document_id: int) -> dict:
                ORDER BY chart_key,sort_order,id""",
             (document_id,),
         )]
+        editorial_notes = [dict(row) for row in conn.execute(
+            """SELECT section_key,note_type,title,body,sort_order,source_page
+               FROM editorial_notes WHERE source_document_id=?
+               ORDER BY section_key,sort_order,id""",
+            (document_id,),
+        )]
         demand = [dict(row) for row in conn.execute(
             """SELECT j.id,j.job_role,j.headcount_needed,j.demand_value,j.demand_unit,
                       j.year_start,j.year_end,j.metric_type,j.source_page,j.note,i.name AS industry
@@ -206,6 +217,7 @@ def document_full_data(document_id: int) -> dict:
     return {
         "document": dict(document),
         "charts": charts,
+        "editorial_notes": editorial_notes,
         "job_demand": demand,
         "skill_requirements": requirements,
         "evidence_pages": evidence_pages,
@@ -243,6 +255,17 @@ def chat(body: ChatRequest) -> dict:
         for index, item in enumerate(contexts, 1)
     ]
     return {"answer": response, "mode": model, "citations": citations}
+
+
+@app.post("/api/rag/chat")
+def grounded_chat(body: GroundedChatRequest) -> dict:
+    """Optional web adapter over the same RAG + MCP service used by cli.py."""
+    from web.backend import answer_question
+
+    try:
+        return answer_question(body.question, body.top_k)
+    except RuntimeError as exc:
+        raise HTTPException(503, str(exc)) from exc
 
 
 @app.get("/api/documents/{document_id}/pages/{page_number}", response_model=None)
